@@ -179,6 +179,28 @@ setResult(d);   // 输出；老版本若报错改 setHomeResult(d)
 4. 详情页必须实测：视频能否播放（看 `#isVideo=true#` 是否生效）、图片防盗链 `@Referer=` 是否正确。
 5. 写完后用 `scripts/validate_rule.py` 校验字段完整性，再用 `scripts/test_rule.js` 在 PC 上模拟 JSEngine 验证 `find_rule`/`searchFind`/`detail_find_rule` 的解析逻辑与占位符 URL（详见 SKILL.md「PC 端测试方法」）。UI 渲染与播放嗅探仍需真机确认。
 
+> ✅ **海阔「点一级列表 → 触发二级解析」的真正条件（2026-09-11 用真实样例 + 本地桩确认）**：
+> **列表项 `url` 必须带规则修饰符**（`;get;UTF-8;{referer@…}` 或 `;post;…`），海阔才会把它当
+> 「规则链接」交给规则引擎请求，进而执行 `detail_find_rule`；**没修饰符就一律当普通网页用 WebView 打开**。
+>
+> 三个实测对照：
+> | 列表项 url 写法 | 点进去的结果 |
+> |---|---|
+> | 纯 HTML 详情页 `https://www.mdzyapi.com/vod/89447/` | ❌ 直接打开网页，规则不执行 |
+> | 纯 JSON 接口 `…/provide/vod?ac=detail&ids=89447` | ❌ 弹出接口 JSON 原文 |
+> | 接口地址 **+ `;get;UTF-8;{referer@…}`** | ✅ 走规则引擎 → `detail_find_rule` 解析出选集 |
+>
+> 权威依据：`examples/4e63v.rule.json`（version 9，真机跑通）的 `find_rule` 里
+> `url:'https://a37p.oqd79.com/base/getTimeStamp？？vid='+it.id+';post;UTF-8;'+'{Content-Type@application/json&&Did@1&&…}'`
+> —— 详情链接就是**带修饰符的接口地址**，交给 `detail_find_rule`（`detail_col_type: text_3`）解析。
+> GET 用英文 `?`；POST 的参数分隔符必须用中文 `？？`（否则 `;post;` 被截断，见 url_tags.md §2）。
+> `detail_find_rule` 内用 `getResCode()` 取响应；推荐结构：`pic_1` 头图卡 + 简介 + `text_1` 线路名 +
+> `text_2` 选集（`extra:{cls:'playlist'}` 标记连续选集）。
+>
+> 另：`url = JSON.stringify({urls:[…],names:[…]})`（官方「视频多线路」）在纯规则真机上**不被识别**，
+> 别指望它当选集用；要选集就走上面的修饰符 + `detail_find_rule`。
+> `@rule=js:` 内联二级也能用，但代码里 `; ? & #` 要转义（官方写法 `；；`/`＆＆＆＆`），非必要不用。
+
 ## 8. 小程序依赖打包（require.json + libs.zip）——「聚阅/juyue 框架」规则
 
 部分规则（尤其来自 `gitee.com/zetalpha/hikerview` 等仓库的「聚阅」框架规则）导出时**不止一个 `rule.json`**，还会带两个文件。这正是第 2 步「规则是否依赖程序/模板」要追问的来源。

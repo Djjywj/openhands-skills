@@ -209,6 +209,7 @@ node <skill>/scripts/test_juyue.js parse.js --fn 分类 --fypage 2
 - 老版本海阔视界若 `setResult(d)` 报错，改为 `setHomeResult(d)`。
 - **布局逐项混用**：只有 `js:` 解析能对每一项单独设 `col_type`（如列表里第 1 项 `text_1` 当标题、后面 `movie_3` 当卡片）；原生 DOM 链只能用规则级统一值。样式全表见 `references/col_type.md`。
 - **请求修饰符顺序固定**：`URL;请求方式;编码;{header}`；JSON API 记得 `;get;UTF-8;{referer@站点}`；URL 里的英文 `?`/`&`/`;` 在 POST 参数或 header 里冲突时用中文 `？`/`＆`/`；；` 代替。
+- **二级解析触发铁律**：列表项 `url` 必须带请求修饰符（`;get;UTF-8;{referer@站点}` / `;post;…`），海阔才会当「规则链接」执行 `detail_find_rule`；**不带修饰符的网页地址会被直接当网页打开**，点进去不会出选集。现成范式：`examples/4e63v.rule.json` 的列表项 url = 接口 + `;post;UTF-8;{headers}`。
 - **筛选铁律**：定义了 `area/sort/year` 就必须在 `url` 放 `fyarea/fysort/fyyear`，否则筛选不生效；`fypage` 不能放 URL 最末尾。
 - **媒体标识**：视频直链加 `#isVideo=true#`、音频加 `#isMusic=true#`；不想被误识别用 `#ignoreVideo=true#` / `#ignoreImg=true#`。全部标签见 `references/url_tags.md`。
 - **多线路/字幕/弹幕/歌词**：`url` 用 JSON 字符串 `{"urls":[...],"names":[...]}`，详见 `references/url_tags.md` §4。

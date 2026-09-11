@@ -30,6 +30,8 @@
 - `type`: `video` / `image` / `audio` / `other`（标准四选一）
 - `url` 含占位符 `fyclass`/`fypage`，**筛选必须加 `fyarea`/`fysort`/`fyyear`**（铁律，缺一不可，否则筛选无效）
 - `url` 必须带 `;get;UTF-8;{referer@站点域名}` 修饰符（Feather/嗅探等引擎无此修饰符会请求失败）
+- **列表项 `url` 也必须带修饰符**：海阔只把「带修饰符的链接」当规则链接交给规则引擎请求、进而执行 `detail_find_rule`；
+  写纯网页地址（无修饰符）会被当普通网页用 WebView 打开，点进去**不出选集**（详见 rule_format.md §5.3）
 - `find_rule` / `searchFind` / `detail_find_rule` 用 `js:` 解析
 - 三级兜底取响应：`var raw = (typeof getResCode==='function')?getResCode():((typeof result!=='undefined'&&result)?result:(typeof input!=='undefined'?input:''));`
 
