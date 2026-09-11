@@ -1,0 +1,23 @@
+{
+  "last_chapter_rule": "",
+  "title": "TODO_站点名",
+  "author": "WorkBuddy",
+  "url": "https://example.com/api/list?cat=fyclass&page=fypage;get;UTF-8;{referer@https://example.com}",
+  "version": 1,
+  "col_type": "movie_3",
+  "class_name": "TODO_分类1&TODO_分类2&TODO_分类3",
+  "type": "audio",
+  "class_url": "1&2&3",
+  "area_name": "",
+  "area_url": "",
+  "sort_name": "",
+  "sort_url": "",
+  "year_name": "",
+  "year_url": "",
+  "find_rule": "js:\nvar d = [];\nvar j = JSON.parse(getResCode());\nvar l = (j.data && (j.data.list || j.data.content || j.data)) || [];\nfor (var i = 0; i < l.length; i++) {\n  var it = l[i];\n  d.push({\n    title: it.title || it.name || '',\n    desc: it.author || it.remarks || it.year || '',\n    img: (it.cover || it.pic || it.img || '') + '@Referer=https://example.com',\n    url: 'https://example.com/book?id=' + (it.id || ''),\n    col_type: 'movie_3'\n  });\n}\nsetResult(d);",
+  "search_url": "https://example.com/api/search?wd=**&page=fypage;get;UTF-8;{referer@https://example.com}",
+  "group": "④音频",
+  "searchFind": "js:\nvar d = [];\nvar j = JSON.parse(getResCode());\nvar l = (j.data && (j.data.list || j.data.content || j.data)) || [];\nfor (var i = 0; i < l.length; i++) {\n  var it = l[i];\n  d.push({\n    title: it.title || it.name || '',\n    desc: it.author || it.remarks || '',\n    img: (it.cover || it.pic || it.img || '') + '@Referer=https://example.com',\n    url: 'https://example.com/book?id=' + (it.id || ''),\n    col_type: 'movie_3'\n  });\n}\nsetResult(d);",
+  "detail_col_type": "movie_1",
+  "detail_find_rule": "js:\nvar d = [];\nvar html = getResCode();\n/* TODO: 提取章节/音频列表，每行 push 一项；音频直链无需 #isVideo 标记 */\n/* 例: d.push({title:'第1章', url:'https://example.com/audio/1.mp3', col_type:'text_2'}); */\nsetResult(d);"
+}

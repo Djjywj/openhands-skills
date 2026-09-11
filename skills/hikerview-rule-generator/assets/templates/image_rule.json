@@ -1,0 +1,23 @@
+{
+  "last_chapter_rule": "",
+  "title": "TODO_站点名",
+  "author": "WorkBuddy",
+  "url": "https://example.com/api/list?cat=fyclass&page=fypage;get;UTF-8;{referer@https://example.com}",
+  "version": 1,
+  "col_type": "movie_3",
+  "class_name": "TODO_分类1&TODO_分类2&TODO_分类3",
+  "type": "image",
+  "class_url": "1&2&3",
+  "area_name": "",
+  "area_url": "",
+  "sort_name": "",
+  "sort_url": "",
+  "year_name": "",
+  "year_url": "",
+  "find_rule": "js:\nvar d = [];\nvar j = JSON.parse(getResCode());\nvar l = (j.data && (j.data.list || j.data.content || j.data)) || [];\nfor (var i = 0; i < l.length; i++) {\n  var it = l[i];\n  d.push({\n    title: it.title || it.name || '',\n    desc: it.count || it.remarks || '',\n    img: (it.cover || it.pic || it.img || '') + '@Referer=https://example.com',\n    url: 'https://example.com/album?id=' + (it.id || ''),\n    col_type: 'movie_3'\n  });\n}\nsetResult(d);",
+  "search_url": "https://example.com/api/search?wd=**&page=fypage;get;UTF-8;{referer@https://example.com}",
+  "group": "①图片",
+  "searchFind": "js:\nvar d = [];\nvar j = JSON.parse(getResCode());\nvar l = (j.data && (j.data.list || j.data.content || j.data)) || [];\nfor (var i = 0; i < l.length; i++) {\n  var it = l[i];\n  d.push({\n    title: it.title || it.name || '',\n    desc: it.count || it.remarks || '',\n    img: (it.cover || it.pic || it.img || '') + '@Referer=https://example.com',\n    url: 'https://example.com/album?id=' + (it.id || ''),\n    col_type: 'movie_3'\n  });\n}\nsetResult(d);",
+  "detail_col_type": "pic_1",
+  "detail_find_rule": "js:\nvar d = [];\nvar html = getResCode();\n/* TODO: 提取图片大图，push 一项用 pic_url 字段展示大图 */\n/* 例: d.push({title:'大图', pic_url:'https://example.com/img/1.jpg@Referer=https://example.com', url:'', col_type:'pic_1'}); */\nsetResult(d);"
+}

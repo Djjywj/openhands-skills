@@ -1,0 +1,23 @@
+{
+  "last_chapter_rule": "",
+  "title": "TODO_站点名",
+  "author": "WorkBuddy",
+  "url": "https://example.com/list?fyclass=fypage",
+  "version": 1,
+  "col_type": "text_3",
+  "class_name": "TODO_分类1&TODO_分类2",
+  "type": "other",
+  "class_url": "1&2",
+  "area_name": "",
+  "area_url": "",
+  "sort_name": "",
+  "sort_url": "",
+  "year_name": "",
+  "year_url": "",
+  "find_rule": "js:\nvar d = [];\nvar html = getResCode();\n/* TODO: 杂类/网页型规则，按站点结构解析。简单 HTML 可改用原生 DOM 链，例如:\n   .list&&li;.title&&Text;.pic&&src;.info&&Text;a&&href */\nvar items = parseDomForArray(html, 'TODO_列表项选择器');\nfor (var i = 0; i < items.length; i++) {\n  d.push({\n    title: parseDomForHtml(items[i], 'TODO_标题选择器&&Text') || '',\n    desc: parseDomForHtml(items[i], 'TODO_简介选择器&&Text') || '',\n    img: parseDom(items[i], 'TODO_图片选择器&&src') + '@Referer=https://example.com',\n    url: parseDom(items[i], 'TODO_链接选择器&&href'),\n    col_type: 'text_2'\n  });\n}\nsetResult(d);",
+  "search_url": "https://example.com/search?q=**&page=fypage",
+  "group": "⑤杂类",
+  "searchFind": "js:\nvar d = [];\nvar html = getResCode();\nvar items = parseDomForArray(html, 'TODO_搜索结果项选择器');\nfor (var i = 0; i < items.length; i++) {\n  d.push({\n    title: parseDomForHtml(items[i], 'TODO_标题选择器&&Text') || '',\n    url: parseDom(items[i], 'TODO_链接选择器&&href'),\n    col_type: 'text_2'\n  });\n}\nsetResult(d);",
+  "detail_col_type": "text_3",
+  "detail_find_rule": "js:\nvar d = [];\nvar html = getResCode();\n/* TODO: 杂类详情按需定义，可为网页内容、下载链接等 */\nsetResult(d);"
+}
