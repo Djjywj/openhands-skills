@@ -12,20 +12,25 @@ description: 自动生成、校验、迭代海阔视界（Hiker View）观看规
 | 文件 | 内容 |
 |------|------|
 | `references/rule_format.md` | 完整字段规范、`find_rule` 写法、详情页取址套路、依赖打包 |
-| `references/rule_patterns.md` | 6 种真实架构写法（纯规则/聚阅宿主/子程序/跨规则程序/Q模板/自包含）与依赖识别 |
+| `references/rule_patterns.md` | 真实架构写法（纯规则/聚阅宿主/子程序/跨规则程序/Q模板/自包含/模块化单例引擎/**从影视 APK 反查后端**）、短视频流与登录态判定、依赖识别 |
+| `references/pitfalls.md` | **真机实战坑位速查**（症状→根因→修法，按链接接管/参数传递/JS作用域/解析/详情播放/持久化/调试/交付安装分类；附「外部经验不要照抄」清单与封面统一 16:9 手法） |
+| `references/detail_layout.md` | **详情页布局硬性规范** + 可直接复制的 ES5 实现（海报卡 / 可折叠简介 / 线路切换 / 剧集动态列数 / 空态） |
+| `references/checklist.md` | **交付前自检清单**（通用 / PC 验证 / 首页搜索 / 详情 / 播放 / 特殊站点 / 交付 / 真机六关） |
 | `references/col_type.md` | 全部 `col_type` 布局样式（官方 help_col_type 蒸馏） |
 | `references/url_tags.md` | 占位符、请求修饰符、`#标签#`、多线路/字幕/弹幕、进度记忆 |
 | `references/js_api.md` | JS 内置 API 速查（请求/DOM/编解码/变量/页面/媒体/模块） |
 | `references/link_protocols.md` | `hiker://` 等伪协议、子页面、二级列表、导入口令格式 |
 | `references/selector_syntax.md` | 原生 DOM 选择器语法（`&&`/`--`/`,n`/`‖`/`.js:`） |
 | `references/crypto_sign.md` | 加密/签名接口实战（AES-CBC 请求加密、`getCryptoJS` 用法、AES-ECB 加密图片、加密封面落地文件加速列表、PC 桩验证方法） |
-| `references/m3u8_playback.md` | M3U8/HLS 播放、索引缓存（`cacheM3u8`）、本地代理、DNS 优选与“加载慢”排查套路 |
+| `references/m3u8_playback.md` | M3U8/HLS 播放、索引缓存（`cacheM3u8`）、本地代理、DNS 优选与“加载慢”排查套路；**第 7 章：直播流专章**——播放地址需重签（否则几秒就断）、海阔「断流即自动播下一条」陷阱、签名算法移植套路与两把验证尺子；**第 8 章：直播平台免登录取流 + 自绘首页（收藏/分类/开播置顶轮播大图）实战模板** |
 | `references/official_docs.md` | 官方文档在线地址与本地快照说明 |
 | `references/publish_to_git.md` | 把技能库/规则推送到 Git 远端（PAT 生成、建仓、推送、免密、坑） |
 | `assets/templates/` | 四类 `rule.json` 模板 + 聚阅 `parse` 对象模板 |
-| `scripts/validate_rule.py` | 字段/依赖/ES5 校验 |
+| `scripts/validate_rule.py` | 字段/依赖校验 + col_type 合法性（含 JS 内 `col_type` 字面量）+ 常见反模式检测 + ES5 兼容性提示 |
 | `scripts/test_rule.js` | 电脑上跑 `find_rule`/`searchFind`/`detail_find_rule`（内置 DOM 引擎） |
 | `scripts/test_juyue.js` | 电脑上跑聚阅子程序 `parse` 对象 |
+
+> ✅ **交付前必过 `references/checklist.md`**（自检清单）；排障必查 `references/pitfalls.md`（症状→根因→修法）。
 
 > 📚 **官方文档**：<https://docs.189.tyrantg.com/docs/hikerview/help_rules.html>（源仓库 <https://github.com/ReflectionLab/Documents>）。
 > 遇到本 skill 未覆盖的字段 / API 时优先查它，**不要臆测**。本 skill 的 `references/` 已是该文档的结构化蒸馏，但文档更新晚于快照时以官方为准。
@@ -93,11 +98,11 @@ description: 自动生成、校验、迭代海阔视界（Hiker View）观看规
 
 ### 第 4 步：分析站点并生成规则
 
-0. **架构形态已在第 3 步与用户确认**，此处直接套对应骨架。详见 `references/rule_patterns.md`（已沉淀 6 种真实写法：A 普通爬虫 / B 聚阅宿主 / C 聚阅子程序-parse 对象或库打包 / D 跨规则程序 / E 自包含子程序 / F Q模板体系）。这一步决定要不要打 `require.json`+`libs.zip`、要不要 `type: all`、要不要 `hiker://` 跨规则调用——形态选错后面全错。**写聚阅子程序优先用新式 `parse` 对象**（模板 `assets/templates/juyue_parse.js`，无需 rule.json/libs）。
+0. **架构形态已在第 3 步与用户确认**，此处直接套对应骨架。详见 `references/rule_patterns.md`（已沉淀写法：A 普通爬虫 / B 聚阅宿主 / C 聚阅子程序 / D 跨规则程序 / E 自包含子程序 / F Q模板体系 / G·H 短视频流与真搜索 / I 模块化单例引擎 / J 从影视 APK 反查后端）。这一步决定要不要打 `require.json`+`libs.zip`、要不要 `type: all`、要不要 `hiker://` 跨规则调用——形态选错后面全错。**写聚阅子程序优先用新式 `parse` 对象**（模板 `assets/templates/juyue_parse.js`，无需 rule.json/libs）。
 1. 以用户给的网址为基础，先抓取判断结构：
    - `curl -L -A "Mozilla/5.0" 网址` 看返回是 HTML 还是 JSON API（Windows 若无 curl，可用本 agent 代为抓取，或 `python -c "import urllib.request;..."`）。
    - 若是 SPA/Next.js，抓 `/_next/static/chunks/*.js` 找 API 端点与字段名。
-   - ⚠️ 写 `js:` 时严格守 ES5（见文末注意事项），不要用 `let` / 箭头函数等高级语法。
+   - ⚠️ 写 `js:` 时**默认用 ES5**（`var` / `function` / 普通 `for`）——兼容性约定，理由见文末注意事项「JS 语法版本」。
 2. 读取对应模板（`assets/templates/<type>_rule.json`）作为骨架，把 `TODO_*` 占位替换为真实值：
    - `title`：站点名；`url`：列表/分类 URL，用 `fyclass`/`fypage` 占位，**API 必须加 `;get;UTF-8;{referer@站点域名}` 修饰符**。
    - `class_name` / `class_url`：分类显示名与 ID，用 `&` 分隔且数量一致；无法确定时先用一个分类占位并提示用户补充。
@@ -168,6 +173,16 @@ node <skill>/scripts/test_rule.js rule.json --rule find_rule \
 - `--url <https>`：在线抓取（忽略 SSL、跟随重定向、带 referer）；**同时把该地址作为 `MY_URL`**（模拟真机当前页地址）
   - URL 里的中文问号 `？？` 会被还原成英文 `?`（与海阔 app 行为一致），便于测 POST 详情传参
 - `--kw`：搜索关键词，替换 `search_url` 的 `**`
+
+**规则 JS 内部自己多次请求（如 `batchFetch` 并发拉多页）时，请改用 `scripts/run_rule_js.mjs`**：`test_rule.js` 的沙箱会把这类规则的结果算少（实测同一规则 5 条 vs 真实 11 条）。`run_rule_js.mjs` 先把规则需要的各页并发抓下来做缓存，再把 `fetch`/`getResCode`/`getParam`/`MY_URL` 原样注入规则 JS 执行，输出可信的「条数 / 网络耗时 / JS 耗时 / 未命中的请求数」：
+```bash
+# 列表：走 batchFetch 并发路径（第 2 参数是分类值，第 3 参数 batch）
+node <skill>/scripts/run_rule_js.mjs rule.json 300 batch
+# 老版本兜底路径：不注入 batchFetch，规则退化为逐个 fetch
+node <skill>/scripts/run_rule_js.mjs rule.json 300 nobatch
+# 搜索
+RULE_JS=searchFind RULE_KW=钓鱼 node <skill>/scripts/run_rule_js.mjs rule.json 300 batch
+```
 - `--fyclass/--fypage/--fyarea/--fysort/--fyyear`：占位符取值（拼真实 URL 并打印）
 - `--vid <id>`：详情页参数，喂给 `getParam('vid')`（验证 `detail_find_rule` 取播放地址用）
 - `--top N`：打印前 N 条样例（默认 5）
@@ -202,7 +217,12 @@ node <skill>/scripts/test_juyue.js parse.js --fn 分类 --fypage 2
 
 ## 注意事项
 
-> ⚠️ **海阔 JSEngine 仅支持 ES5！** 规则里的 `js:` 代码**只能用 `var` / `function` / 普通 `for`**，禁用 `let` / `const` / 箭头函数 `=>` / 反引号模板字符串 / `class` / `async`/`await` / `for...of` / 解构 / 展开 `...`。用错语法在**手机端会直接报错导致规则失效**，但本机 `scripts/test_rule.js`（跑在 Node 上）能照常通过——形成「PC 测试通过、真机却挂」的假象。所以写完规则务必看一眼是否纯 ES5；`test_rule.js` 现已内置 ES5 静态检查，会主动告警。
+> ⚠️ **JS 语法版本：默认写 ES5（兼容性约定，不是语法禁令）**
+> **事实**：官方文档（`help_js.md` / `help_rules.md`）里的示例**大量使用 `let` / `const` / 箭头函数**，说明**新版海阔的 JSEngine 支持 ES6+**；但**旧版 App 的引擎只支持 ES5**（本库早期结论即来自此场景，未留存真机复现记录）。
+> **本库约定**：规则里的 `js:` 代码**默认用 ES5 写**（`var` / `function` / 普通 `for`），这样任何版本都能跑；**不是"用了 `=>` 就一定报错"**。
+> 若你手头的 App 版本实测 ES6 正常，或要移植的现成源本身就是 ES6，**可以放开**；拿不准就写 ES5。
+> `scripts/validate_rule.py` / `scripts/test_rule.js` 的 ES5 检查结果按**兼容性提示**看待（不算错误、不影响退出码）。
+> 💡 注意：本机 `test_rule.js` 跑在 Node 上，**ES6 在 PC 一定通过**，所以"PC 通过"不能证明"真机通过"——这也是本库仍推荐 ES5 的原因。
 
 - 永远以真实站点响应为准，不要臆测字段名；抓取不到就问用户要接口或页面片段。
 - 优先 `js:` 写法（灵活、对 JSON/HTML 通吃），原生 DOM 链仅作简单 HTML 站点的快捷选项。
@@ -210,6 +230,13 @@ node <skill>/scripts/test_juyue.js parse.js --fn 分类 --fypage 2
 - **布局逐项混用**：只有 `js:` 解析能对每一项单独设 `col_type`（如列表里第 1 项 `text_1` 当标题、后面 `movie_3` 当卡片）；原生 DOM 链只能用规则级统一值。样式全表见 `references/col_type.md`。
 - **请求修饰符顺序固定**：`URL;请求方式;编码;{header}`；JSON API 记得 `;get;UTF-8;{referer@站点}`；URL 里的英文 `?`/`&`/`;` 在 POST 参数或 header 里冲突时用中文 `？`/`＆`/`；；` 代替。
 - **二级解析触发铁律**：列表项 `url` 必须带请求修饰符（`;get;UTF-8;{referer@站点}` / `;post;…`），海阔才会当「规则链接」执行 `detail_find_rule`；**不带修饰符的网页地址会被直接当网页打开**，点进去不会出选集。现成范式：`examples/4e63v.rule.json` 的列表项 url = 接口 + `;post;UTF-8;{headers}`。
+- **链接强接管（推荐）**：卡片 url 追加 `@rule=js:...`（如 `@rule=js:$.require('引擎').detail()`），让卡片**一定走你自己的 JS**，不会在解析为空时 fallback 成普通网页。剧集/播放项用 `play` 接管，别用 `detail`。——详见 `references/pitfalls.md` §一。
+- **自绘搜索框禁用 `hiker://search?s=`**：那是系统级搜索协议，会丢掉本源；要 `@rule` 接回本源 `search()`（见 `pitfalls.md` §一.2）。
+- **参数别信 `getParam`**：详情参数从 `MY_URL` 解析，搜索词读 `MY_KEYWORD`（见 `pitfalls.md` §二.6）。
+- **序列化回调禁引用闭包变量**：`$.toString` / `$.lazyRule` / `$().rule` / `registerTask` 的回调体是**序列化后独立求值**的，拿不到外层变量（`_H`/`_UA`/循环变量…），要用的一律**当实参传进去**。官方 `help_js.md` 明文警告过。——这是"整页 `ReferenceError`"的头号原因。
+- **`fetch` 失败返回字符串 `"error"`**：解析前必须先判 `htm !== 'error'`，否则 `JSON.parse`/DOM 解析整页崩（见 `pitfalls.md` §三.9）。
+- **详情页要有样子**：返回顺序固定 `[海报卡] → [简介] → [（可选）线路] → [剧集]`；海报卡 `title` 单行 + `desc` 多行（防留白）；飞跳详情加 `#immersiveTheme#`；可折叠简介用 `rich_text` + `<a href='**单引号**…@lazyRule=.js:'>`。完整可复制代码见 `references/detail_layout.md`。
+- **播放地址默认不加 `@headers=`**，确认防盗链再加（见 `pitfalls.md` §五.17）。
 - **筛选铁律**：定义了 `area/sort/year` 就必须在 `url` 放 `fyarea/fysort/fyyear`，否则筛选不生效；`fypage` 不能放 URL 最末尾。
 - **媒体标识**：视频直链加 `#isVideo=true#`、音频加 `#isMusic=true#`；不想被误识别用 `#ignoreVideo=true#` / `#ignoreImg=true#`。全部标签见 `references/url_tags.md`。
 - **多线路/字幕/弹幕/歌词**：`url` 用 JSON 字符串 `{"urls":[...],"names":[...]}`，详见 `references/url_tags.md` §4。

@@ -52,6 +52,12 @@ Activate this behavior whenever any of the following happen:
    when the user asks for it or when it confirms correctness.
 6. **List every file touched.** Report all created and modified files, not just the primary one. If
    there are many, group them or bundle them into one archive.
+7. **For files the user must import into an app, ship the consumable format too.** A deliverable that
+   is meant to be opened by a phone/app (e.g. a Hiker View `.hk小程序.zip`, a config, a profile) is
+   not done until the user can actually get it in. Give the download **and** the import steps, and
+   offer every format the app accepts (e.g. both the `.zip` package and the bare `rule.json`) — app
+   versions differ in what their import menu accepts, so one of them may be greyed out. Say in one
+   line what to try if the first one fails.
 
 ## Delivery block
 
@@ -65,10 +71,12 @@ Deliverables
   Path: /workspace/project/output/data.csv
 Bundle: /workspace/project/output/bundle.zip  (1.3 MB)
 To download: open the Files tab in Agent Canvas and select the file, then choose Download.
+Or direct: http://localhost:8000/api/file/download?path=/workspace/project/report.pdf
 ```
 
-Include a clickable markdown link only when the environment provides a URL that works with the user's
-existing session and does not require an embedded API key.
+Give a clickable markdown link whenever you have verified one — prefer the UI-origin form
+(`http://localhost:<ui-port>/api/file/download?path=<absolute-path>`), which needs no embedded key.
+Link only URLs you actually probed, and never a `host.docker.internal` one (see below).
 
 ## Downloading in Agent Canvas
 
@@ -80,7 +88,7 @@ Verified backend routes (for reference):
 
 | Route | Auth | Behavior |
 | --- | --- | --- |
-| `GET /api/file/download?path=<absolute-path>` | `X-Session-API-Key` | Returns the file with `Content-Disposition: attachment` (true download). |
+| `GET /api/file/download?path=<absolute-path>` | `X-Session-API-Key` on some deployments — **key-free on the UI port in the docker dev stack (probe, don't assume)** | Returns the file with `Content-Disposition: attachment` (true download). |
 | `GET /api/conversations/<conversation_id>/workspace/<relative-path>` | API key or cookie `oh_workspace_session_key` | Serves the workspace file inline. |
 | `GET /api/v1/app-conversations/<app_conversation_id>/file?file_path=<absolute-path>` | session auth | Returns file content as JSON for previews. |
 
@@ -89,8 +97,33 @@ browser when the agent server shares the UI origin and accepts the session cooki
 sharing. Never embed session keys, tokens, or credentials in a download link. When no key-free URL is
 available, give the absolute path and tell the user to use the Files tab.
 
-### Most reliable: serve the workspace over a host-mapped port
+### Try this first: the UI's own origin (no port mapping, no key)
 
+The file routes are usually served by the same origin the user is already viewing the UI on, so the
+cheapest working link is that origin + `/api/file/download?path=<absolute-path>`. Probe it from the
+agent side **with no auth header** — if it answers `200` + `Content-Disposition: attachment`, hand the
+user the `http://localhost:<ui-port>/...` form of that exact URL:
+
+```bash
+curl -s -D - -o /tmp/probe.bin \
+  "http://127.0.0.1:8000/api/file/download?path=/workspace/project/report.pdf" | head -8
+# 200 + content-disposition: attachment
+# -> give the user: http://localhost:8000/api/file/download?path=/workspace/project/report.pdf
+```
+
+Measured in the Agent Canvas docker dev stack: on the UI port (8000 = `static-server.mjs`) this route
+returns the attachment **without any key**, so do not trust the table above to decide you need auth —
+probe first.
+
+**Never hand the user a `host.docker.internal` URL.** That name resolves only inside the sandbox; the
+user's browser cannot open it, so a link you successfully `curl`'d still "does nothing" for them.
+Reachability from the agent proves nothing about their browser — the UI origin they are already using
+(`http://localhost:<ui-port>`) is the only host you know they can reach. Use `host.docker.internal`
+only as an agent-side probe.
+
+### Fallback: serve the workspace over a host-mapped port
+
+Use this only when the UI-origin route above is not key-free and the Files tab is unavailable.
 The Files tab is not always visible to the user, and the API routes above either need the session key
 (401 without it) or return previews instead of downloads. When the user cannot find the Files tab or a
 link "does nothing", serve the deliverable directory over a **container port that Agent Canvas maps to
@@ -99,7 +132,9 @@ a user-reachable host port**:
 1. Find the port mapping. The repo context advertises it as `work_hosts`, e.g.
    `http://localhost:41757 (port 8011)` means container port 8011 is reachable at
    `http://localhost:41757`. If no mapping is advertised, list listening ports
-   (`ss -ltnp`) and probe `http://host.docker.internal:<port>` to find a reachable one.
+   (`ss -ltnp`) and probe `http://host.docker.internal:<port>` to find a reachable one. That probe
+   succeeds only if the container port is published, and it still does not tell you the host-side port
+   number — if you cannot establish the mapping, do not guess a link; use the Files tab instead.
 2. Put ASCII-named copies of each deliverable in a `download/` subfolder (avoid CJK/spaces in
    filenames, which break some download flows).
 3. Start a static server on the container port (background it) and confirm it locally:
@@ -112,8 +147,8 @@ a user-reachable host port**:
    ```
 
    Or manually: `cd /workspace/project && nohup python3 -m http.server 8011 --bind 0.0.0.0 &`.
-4. Verify from the agent side before reporting:
-   `curl -sI http://host.docker.internal:41757/download/dmhyy_rule.json` (expect HTTP 200).
+4. Verify from the agent side before reporting (this proves the server + mapping exist, **not** that the
+   user's browser can reach the port): `curl -sI http://host.docker.internal:41757/download/f.json`.
 5. Give the user the landing-page URL (`http://localhost:41757/download/`) plus one direct link per
    file.
 
@@ -168,4 +203,4 @@ python3 scripts/delivery_manifest.py <path> [<path> ...] [--archive <archive-pat
 - `scripts/delivery_manifest.py` - verify deliverables, optionally build an archive, and print a
   consistent delivery block.
 - `scripts/serve_deliverables.py` - serve a directory over a host-mapped container port and print a
-  key-free landing page plus direct download links (see "Most reliable" above).
+  key-free landing page plus direct download links (see "Fallback" above).
