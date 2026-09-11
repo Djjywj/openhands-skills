@@ -79,7 +79,7 @@
 
 ### 5.2 `js:` JavaScript（最灵活，推荐用于 JSON API 与复杂页面）
 
-> ⚠️ **JSEngine 仅支持 ES5**：以下代码只能用 `var` / `function` / 普通 `for`。`let` / `const` / 箭头函数 `=>` / 反引号 / `class` / `async` 等会在**设备端报错**。`scripts/test_rule.js` 已内置 ES5 静态检查。
+> ℹ️ **JS 语法版本**：新版海阔 JSEngine 支持 ES6+（官方示例即用 `let`/`const`/箭头函数），**旧版仅支持 ES5**。本库默认用 `var` / `function` / 普通 `for` 以兼容所有版本——这是**兼容性约定，不是语法禁令**；真机实测 ES6 可用则可放开。`scripts/test_rule.js` / `validate_rule.py` 的 ES6 探测仅作提示，不判错。
 >
 > 取响应文本建议用三级兜底，兼容海阔 / 嗅觉(Feather) 等不同引擎的全局变量差异：
 > `var raw = (typeof getResCode === 'function') ? getResCode() : ((typeof result !== 'undefined' && result) ? result : (typeof input !== 'undefined' ? input : ''));`

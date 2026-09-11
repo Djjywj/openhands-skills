@@ -292,3 +292,193 @@ let parse = {
 > 若同时命中多条，逐条列出（例如"本规则=普通爬虫 + 跨规则依赖配置助手"），让用户一次装齐。
 
 > **区分"依赖方"与"提供方"**：模板·Q、配置助手这类 `type: tool` + `$.exports` 的程序是**被依赖的底座（提供方）**，它们自身一般自包含、无需其它程序；真正需要告知用户"请安装 XXX"的是**依赖它们的主规则**。validate_rule.py 已对自引用（`?rule=` 后名字 = 本规则 title）做排除，不会对底座程序误报依赖。
+
+## 模式 G：短视频流「筛选 + 凑数」写法（抖音/快手类 feed 接口）
+
+适用：接口每次只回十几条、内容混杂（带货/短剧/AI 生成/低质），用户要「只看长视频/高赞」。
+
+- **多档门槛用分类传参**：在 `url` 里加一个接口会忽略的参数名占位，如 `&min_sec=fyclass`，`class_url` 写 `300&600&1800`；
+  JS 里 `try{ v=parseInt(getParam('min_sec'),10) }catch(e){}` 取值，取不到就退回默认值（**必须有兜底**，否则占位符没被替换时会拿到 `NaN`）。
+- **翻页凑数 + 提前停止**：`for(p=2;p<=MAX_PAGES;p++){ if(cands.length>=TARGET) break; ... }`，避免为凑满一屏发太多请求（移动端每页 1 秒级）。
+- **三道过滤**：时长硬门槛（`video.duration/1000`）、点赞门槛（`statistics.digg_count`）、关键词黑名单（`desc+nick` 统一转小写再 `indexOf`，中英混排关键词要写成小写形式）。
+- **AI 生成内容有官方声明字段，优先用它**（2026-09 实测抖音 aweme）：`risk_infos.content` 里会出现「作者声明：内容由 AI 生成」「作品含AI生成内容」，另有 `aigc_info.aigc_sticker_id` / `aigc_type===-1`。feed 里约 **14%** 条目带该声明；用 222 条样本验证：0 漏判、0 误杀（关键词黑名单同期只能命中其中一小部分）。JS 里 `String((a.risk_infos||{}).content||'').toLowerCase()` 做 `indexOf('ai生成')`（记得同时匹配带空格的 `'ai 生成'`）。**不要把 `media_type` 当 AI 标识**——实测恒为 4，无区分度；带货 `anchors` 在 feed 里几乎恒空，`video_tag` 只有分类。
+- **无分类（单列表）规则**：`class_name` 与 `class_url` 同时留空字符串即可，首页直接请求 `url`（顶部不显示分类栏）。validate_rule.py 已放行这种写法（只告警）。
+- **单列表 + 提速**：`url` 里 `refresh_index=fypage` 只取第 1 页，其余页（2..MAX_PAGES）在 JS 里用 `batchFetch` 一次并发取回（`typeof batchFetch==='function'` 判断 + 逐个 `fetch` 兜底），实测 12 页 ≈1.0 秒、整体刷新 1.5~2 秒。
+- **筛完为空要给人话**：`setResult([{title:'这次没筛到…，下拉刷新换一批',col_type:'text_3'}])`，别返回空列表让人以为规则坏了。
+
+## 模式 H：短视频 App 的「真·搜索」（抖音类，2026-09 实测）
+
+**结论先行：抖音搜索接口必须登录，匿名拿不到数据，别在这上面耗时间。**
+
+- 实测 8 个端点（web `/aweme/v1/web/general/search/single/`、app `/aweme/v1/general/search/single/`、`/aweme/v1/search/item/`、话题 `/aweme/v1/challenge/aweme/` 等）：无 Cookie 时统一 `status_code=2483`，`data` 为 `null`，文案「请先登录，再继续搜索吧」。
+  - 自己注册匿名 `ttwid`（`https://ttwid.bytedance.com/ttwid/union/register/`）拿到 cookie **也不行**，照样 2483。
+  - 第三方镜像接口（pearktrue / 52vmy / tenapi 之类）当年可用，现已 SSL 过期 / 522 / 502，不要写进规则。
+- 匿名**能**用的：`/aweme/v1/search/sug/`（下拉建议词，用来给"建议搜索"按钮）、`/aweme/v1/web/hot/search/list/`（热搜词）。
+- 登录后的链路：规则里 `web://https://www.douyin.com/` 让用户在网页登录一次 → `getCookie('douyin.com')` 取 `sessionid`（`sessionid_ss`/`sid_tt` 也行）→ 拼 `Cookie@...` 请求头 → 搜索接口即可返回数据。cookie 取值要写成容错函数（`getCookie` 可能返回空串、`JSON.stringify` 形态、或抛错）。
+
+**通用深搜解析器（一份代码吃三种结构）**：feed 是 `aweme_list`，搜索是 `data[].aweme_info`，话题是 `aweme_list`（带 `aweme_info`）。与其为每个接口写一套路径，不如写个栈遍历（子节点上限 ~16，深度设上限）找"带 `aweme_id` + `video` 的对象"：
+
+```js
+function _scanRaw(txt,minSec,minDigg,out){
+  if(!txt) return; var j=null;
+  try{ j=JSON.parse(String(txt).replace(/^\s+|\s+$/g,'')) }catch(e){ return }
+  if(j && !j.aweme_list && !j.data && !j.aweme_info) return;      // 风控/错误结构直接丢
+  var st=[j],n=0;
+  while(st.length && n<4000){ var o=st.pop(); n++;
+    if(!o || typeof o!=='object') continue;
+    if(o.aweme_id && o.video){ _take(o,minSec,minDigg,out); continue }
+    var keys=Object.keys(o), lim=0;
+    for(var i=0;i<keys.length && lim<16;i++){ var v=o[keys[i]]; if(v && typeof v==='object'){ st.push(v); lim++ } }
+  }
+}
+```
+
+实测：feed 12/12 条、搜索桩数据 2/2 条有效条目全部命中，且不会把 `user_info`（`type:511`）之类的节点误当视频。
+
+**登录入口必须放在用户一眼能看到、且登录后会自动消失的地方**（实测踩坑：只把「去登录」放在「没搜到」分支里，用户搜到结果就永远看不到它，直接来问「没看到去登录啊」）：
+
+- 列表页（find_rule）**顶部**插一张卡片（`res.unshift(...)`），条件是「没读到 `sessionid`」；登录后 `getCookie` 有值 → 卡片自动消失，不会长期碍眼。这是唯一保证能被发现的写法。
+- 搜索结果页：**「有结果」和「没结果」两个分支都要放**登录/重搜入口（模块化函数 `_loginItem()` / `_againItem()` 复用），别只放没结果那支。
+- 判断登录要容错：`getCookie('https://www.douyin.com')` 之外再试 `fetchCookie(...)` 与网关域名；返回值可能是空串、`JSON.stringify` 数组（`[{name,value}]`）或抛错，统一包一层 `_ckStr()`。
+
+**搜不到就降级，并且把"怎么解锁"直接做成列表项**（用户不会去翻帮助）：池内关键词匹配（召回率很低，7 个词 0 命中）+ 这三条入口：
+
+| 入口 | 链接 | 说明 |
+|------|------|------|
+| 网页搜索 | `web://https://www.douyin.com/search/<kw>`（kw 需 encodeURIComponent） | 最稳，直接跳官方网页结果 |
+| 登录解锁 | `web://https://www.douyin.com/` | 网页登录一次，cookie 就位 |
+| 重新搜索 | `hiker://search?s=<kw>&rule=<规则标题>` | `rule=` 要用**原文**标题，别 encodeURIComponent |
+
+**本地测试这类规则的技巧**：`scripts/test_rule.js` 的 `getCookie` 是返回 `''` 的桩，所以登录分支在本地永远走不到。想验证登录后的解析逻辑，就复制一份规则、把 `_ckStr` 里 `return out` 前强制写入假 cookie（如 `out='sessionid=fake'`），再用 `--html <桩 json>` 喂一个手造的搜索响应（`data[].aweme_info`），看解析/过滤是否正确。另外该脚本未实现 `fypage@-1@*20@`，`--url` 测试时把 offset 换成具体数字（如 `offset=0`）；该语法海阔本体是支持的（见 `url_tags.md`）。
+
+## 登录态判定：结果导向 + 手动粘贴凭证（2026-09-11 抖音精选实测）
+
+上面只按「cookie 里有没有 `sessionid`」判断登录，比赛站点会踩三个坑，导致「用户明明登录了，规则还说没登录」：
+
+1. **webview 登录的 cookie 未必进 `getCookie`**：海阔可能用外部浏览器打开 `web://`，或 cookie 只存在 App 的 cookie manager，`getCookie(域名)` 读不到；`fetchCookie` 也未必有。
+2. **cookie 有 `sessionid` 但已失效**：字段还在，接口却回 `status_code=2483 请先登录`。
+3. **跨域不共享**：`www.douyin.com` 与 `api-play-zjg.amemv.com` 是两个域，读前者拿去请求后者经常不对。
+
+v10 的改法：**用「搜索接口的实测返回」当唯一判据**，cookie 只作为传输手段。
+
+```js
+function _probe(ck){                     // 打一次真实搜索接口，只看 status_code
+  var u='https://<api>/search/?keyword=%E7%83%AD%E9%97%A8&count=3&offset=0&ts=1700000000';
+  var h=APP_UA; if(_has_sessionid(ck)) h=h+'\nCookie@'+ck;
+  var r=''; try{ r=fetch(u,{headers:h}); }catch(e){ return {login:0}; }
+  var c=-1; try{ c=JSON.parse(r).status_code; }catch(e){}
+  if(c===0) return {login:0};            // 0 = 接口能用（有登录态）
+  if(c===2483) return {login:1};         // 2483 = 明确说没登录
+  return {login:-1};                     // 其它码（风控/限流）→ 不要下结论
+}
+```
+
+- **判定要缓存**：探针每次多一次网络请求。成功缓存 10 分钟，失败缓存 5 分钟，避免下拉刷新反复打接口。
+- **失败必须给可执行的下一步**，别只说「请登录」。按「能拿到什么凭证」给三条路：① 站内 `web://` 登录页 ② `input://` 粘贴 Cookie（最管用，配合抓包）③ 图文教程卡。
+- **自检卡**（让用户截图发你即可定位）：输出 `判定 / 依据 / cookie 长度 / 含 sessionid / 键名 / 各来源凭证 / 接口 status_code+msg / getCookie 可用性`。`out.login===1` 且 cookie 含 `sessionid` 时文案要写「凭证已失效（过期）」，别写「没登录」——两者解决办法不同。
+- **本地桩怎么测登录分支**：桩的 `getCookie` 恒为空，但 `--url` 的 query 会进 `getParam`，把 cookie 当参数传即可：`--url '...&ck=sessionid%3Dfake'` 配 `--html <桩 json>`；要测「没登录」就喂 `{"status_code":2483,...}`。
+
+
+---
+
+## 模式 I：模块化单例引擎（复杂站点推荐架构）
+
+> 来源：开源技能库 wsh-feiyu/hikerskill（其称已用于 2070 个真实源）。**本库未在真机复现**，但架构本身与官方 `$.exports` / `$.require` 机制一致，逻辑自洽，复杂源可采纳。
+> 适用：站点要**同时**支持 首页 / 分类 / 筛选 / 搜索 / 详情 / 播放，且这些页面**共用同一套解析逻辑**时。站点极简单就别上，单文件直写更省事。
+
+### 1. 核心思路
+
+**只有一个模块（`pages` 里只有一项），所有入口都转发到它**，避免"首页一套解析、搜索又抄一遍"造成的状态不一致：
+
+```
+顶层（每个规则入口）
+  find_rule        : $.require('pages[0]', mod => mod.home())
+  searchFind       : $.require('pages[0]', mod => mod.search())
+  detail_find_rule : $.require('pages[0]', mod => mod.detail())
+
+pages[0]（唯一模块）
+  ├─ 自包含单例      var _inst = null; function ENGINE(){ if(!_inst) _inst = {...}; return _inst; }
+  ├─ 原语层  getHTML / cleanText / absolutizeUrl / hashId / uniqBy
+  ├─ 解析层  parseItems / parseDetail / parseEpisodes
+  ├─ API 层  home / category / search / detail / play
+  └─ $.exports = { home:…, category:…, search:…, detail:…, play:… }
+```
+
+**顶层只放一行转发**，别把逻辑写死在顶层字段里。
+
+### 2. 为什么要"单例"
+
+`$.require` 每次调用都会**重新求值模块代码**（模块是"代码"不是"已构造对象"），所以模块内部用单例持有跨调用的缓存：
+
+```js
+var _INST = null;
+function ENGINE() {
+    if (_INST) { return _INST; }
+    var state = { detailCache: {}, lastError: '' };
+    function getHTML(url) { /* ... */ }
+    function parseItems(html) { /* ... */ }
+    function home() { /* ... */ }
+    function detail() { /* ... */ }
+    function play() { /* ... */ }
+    _INST = { state: state, home: home, search: search, detail: detail, play: play };
+    return _INST;
+}
+ENGINE();                       // 模块加载时就构造好
+$.exports = { home: ENGINE().home, detail: ENGINE().detail, play: ENGINE().play };
+```
+
+> ⚠️ **别指望单例做跨请求持久化**。`$.require` 的模块实例寿命不确定，重启 App 一定丢。
+> 需要真正持久化的（token、账号 cookie）→ 用 `setItem`/`getItem`；会话内临时态 → `putVar`/`getVar`（见 `pitfalls.md` §六.20）。
+
+### 3. 关键约定
+
+- **每条卡片 url 上挂 `@rule`**（`@rule=js:$.require('pages[0]').detail()` / `.play()`），与顶层配置解耦，防止 fallback 成普通网页（见 `pitfalls.md` §一.1）。
+- **回调里不许引用闭包变量**：`$.require` / `$.lazyRule` / `$.toString` / `registerTask` 的参数都是**序列化传递**，要用的东西一律**当实参传进去**（【官方】`help_js.md` 明文，见 `pitfalls.md` §三.8）。
+- **搜索参数用 `MY_KEYWORD`，详情参数从 `MY_URL` 解析**，别信 `getParam`（见 `pitfalls.md` §二.6）。
+- **自绘搜索框用 `@rule` 接本源 `search()`**，禁用 `hiker://search?s=`（§一.2）。
+- ⚠️ 模块化写法的回调里**默认按 ES5 写**（`function` 而非 `=>`），与本库默认约定一致。
+
+### 4. 什么时候**不要**用
+
+- 站点简单（一个列表一个详情）：直接写纯规则 A，上这套架构属于过度设计。
+- `type` 是 `image` / `misc` 且逻辑很轻的：同上。
+- 要交付"单文件即导即用"给不折腾的用户，且顶层字段本来就能写清楚：**保持简单**。
+
+---
+
+## 模式 J：从「影视 App 安装包」反查后端（免抓包快速出源）
+
+用户丢来一个 `.apk` 时**先别急着抓包**——影视类 App 十有八九后端是一台公开的 **苹果CMS(MacCMS)**，接口地址往往能从安装包里直接读出来。
+
+**步骤**（灵虎视频 2.0.3 实战，约 10 分钟出源）：
+
+1. 解包：`unzip -o app.apk -d apk_out`
+2. **判断是否加壳**：若 `assets/SignatureKiller/origin.apk` 之类里**没有 `classes.dex`**，说明真身被壳压着。
+   ⚠️ **别去啃 inner 包**——真代码在**外层** `classes*.dex`（常有多个，8~10MB 那种）。
+3. 在外层 dex 上**直接正则扫字符串**：
+   ```bash
+   for d in apk_out/classes*.dex; do strings -n 8 "$d"; done \
+     | grep -Ei 'https?://[a-z0-9.\-]+' | sort -u
+   ```
+   重点找**远程配置短链**（形如 `https://bind.aaa.xyz/89.txt,https://bind.bbb.xyz/r2.txt`）和 `api.php` / `provide/vod` 字样。
+4. 拉那条短链 → 里面通常就是**主接口域名 + 备用域名**（如 `https://app7.555618.xyz`）。
+5. 直接打标准接口验证，**免签名 / 免登录 / 无 UA·Referer 要求**：
+   - 列表 `…/api.php/provide/vod/?ac=detail&t=<tid>&pg=<pg>`
+   - 搜索 `…/api.php/provide/vod/?ac=detail&wd=<关键词>`
+   - 详情 `…/api.php/provide/vod/?ac=detail&ids=<id>`
+   - ⚠️ **必须 `ac=detail`**：`ac=list` 的返回里**没有 `vod_pic`**，海报会空。
+6. 写规则：纯规则（模式 A）即可，要点如下。
+
+**苹果CMS 出源要点**（配合 `references/pitfalls.md` §12 看）：
+
+| 点 | 做法 |
+|---|---|
+| 分类 | `t=<tid>`：1电影 2连续剧 3综艺 4动漫 5短剧 6纪录片 7少儿（以实际返回为准） |
+| 列表项 url | **必须带规则修饰符**：`…?ac=detail&ids=<id>;get;UTF-8;{referer@<host>}`，否则海阔拿 WebView 打开原网页 |
+| 选集解析 | `vod_play_from` / `vod_play_url` 用 `$$$` 分线路、`#` 分集、`$` 分「集名 / 地址」 |
+| 线路过滤 | **只留含 `.m3u8` 的线路**；`NBY`（加密解析）、`qq`（腾讯外链）等直连取不到的直接跳过 |
+| 播放项 | `url + '#isVideo=true#'`；海报 referer 用**图片自身域名** `@Referer=https://<图床域名>/` 最稳 |
+
+> 💡 同类推断：`bind.*` 域名 + `*.txt` 的**多域名逗号串**是这类 App 的典型"远程配置"，搜到它＝拿到接口清单；dex 里搜不到再回退抓包。
+> ⚠️ 该接口若提示"系统安全验证"，多为**搜索**接口每次必现的图片验证码，规则内无法绕过——如实提示即可（见 `pitfalls.md` §12 末）。
+

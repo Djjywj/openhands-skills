@@ -7,11 +7,15 @@
     python validate_rule.py <path> --json      # 额外输出机器可读 JSON 报告
 
 退出码: 0=通过(仅警告), 1=存在错误(字段缺失/不匹配), 2=用法错误
+
+输出分三段：[错误]（退出码 1）/ [警告]（真问题，建议改）/ [提示]（兼容性建议，不算错）。
 """
 import json
 import sys
 import os
 import re
+import io
+import contextlib
 
 REQUIRED = ["title", "url", "type", "find_rule", "class_name", "class_url"]
 VALID_TYPES = {"video", "audio", "image", "other", "tool", "all"}
@@ -32,7 +36,7 @@ VALID_COL_TYPES = {
     "x5_webview_single",
 }
 
-# JS 里禁止的 ES6+ 语法（JSEngine 仅 ES5）
+# ES6+ 语法探测（旧版 JSEngine 仅 ES5，仅作兼容性提示，不判错）
 ES6_PATTERNS = [
     (re.compile(r"\b(?:const|let)\s+"), "const / let（请用 var）"),
     (re.compile(r"=>"), "箭头函数 =>（请用 function(){}）"),
@@ -44,6 +48,19 @@ ES6_PATTERNS = [
 
 JS_FIELDS = ("find_rule", "searchFind", "detail_find_rule", "preRule",
              "sdetail_find_rule", "last_chapter_rule")
+
+# JS 里出现的 col_type 字面量（如 col_type:'movie_3'），用于校验 JS 内动态样式
+COL_TYPE_LITERAL = re.compile(r"""col_type\s*[:=]\s*['"]([a-zA-Z_0-9]+)['"]""")
+
+# 常见反模式：(正则, 类别, 说明)  类别 warn=警告 / hint=提示
+ANTI_PATTERNS = [
+    (re.compile(r"hiker://search\?s="), "warn",
+     "出现 hiker://search?s= —— 这是系统级搜索协议，会丢弃本源；自绘搜索框应改用 @rule 接回本源 search()"),
+    (re.compile(r"""href\s*=\s*"[^"]*@lazyRule"""), "warn",
+     'rich_text 里的 <a href="...@lazyRule..."> 用了双引号，会被内层双引号截断（表现为"展开:字在、点了没反应"）；href 必须用单引号'),
+    (re.compile(r"JSON\.parse\s*\(\s*fetch\s*\("), "warn",
+     "直接 JSON.parse(fetch(...))：fetch 失败会返回字符串 'error'，解析会整页崩；先判空串/'error' 再 parse"),
+]
 
 
 def _js_fields(rule):
@@ -110,7 +127,7 @@ def detect_dependencies(path, rule):
 
 
 def validate(path):
-    errors, warnings = [], []
+    errors, warnings, notices = [], [], []
 
     if os.path.isdir(path):
         cand = os.path.join(path, "rule.json")
@@ -120,7 +137,7 @@ def validate(path):
                 cand = os.path.join(path, cands[0])
             else:
                 print(f"[错误] 目录中没有 rule.json: {path}")
-                return 1, [], []
+                return 1, [], [], []
         path = cand
 
     try:
@@ -128,20 +145,26 @@ def validate(path):
             raw = f.read()
     except Exception as e:
         print(f"[错误] 读取失败: {e}")
-        return 1, [], []
+        return 1, [], [], []
 
     try:
         rule = json.loads(raw.lstrip("\ufeff"))
     except Exception as e:
         print(f"[错误] JSON 解析失败: {e}")
-        return 1, [], []
+        return 1, [], [], []
 
     is_tool = str(rule.get("type", "")).strip() in ("tool", "all")
     required = [k for k in REQUIRED if not (is_tool and k in ("class_name", "class_url"))]
+    no_class = not str(rule.get("class_name", "") or "").strip() and not str(rule.get("class_url", "") or "").strip()
     for k in required:
         v = rule.get(k, "")
         if v is None or (isinstance(v, str) and v.strip() == ""):
+            # 合法：单列表规则（class_name/class_url 均为空，首页直接用 url）
+            if k in ("class_name", "class_url") and no_class:
+                continue
             errors.append(f"字段 '{k}' 缺失或为空")
+    if no_class:
+        warnings.append("无分类（单列表）规则：class_name/class_url 均为空，首页直接请求 url")
 
     t = str(rule.get("type", "")).strip()
 
@@ -155,11 +178,24 @@ def validate(path):
     if t and t not in VALID_TYPES:
         warnings.append(f"type='{t}' 非标准值，建议用 {sorted(VALID_TYPES)}")
 
-    # ---- col_type ----
+    # ---- col_type（顶层 + JS 内字面量） ----
     for cf in ("col_type", "detail_col_type", "sdetail_col_type"):
         v = str(rule.get(cf, "")).strip()
         if v and v not in VALID_COL_TYPES:
             warnings.append(f"{cf}='{v}' 不在官方常用样式表内，请确认拼写（见 references/col_type.md）")
+    js_bodies = _js_fields(rule)
+    bad_literals = set()
+    for _fname, _code in js_bodies:
+        for mt in COL_TYPE_LITERAL.finditer(_strip_js(_code)):
+            lit = mt.group(1)
+            if lit not in VALID_COL_TYPES:
+                bad_literals.add(lit)
+    if bad_literals:
+        warnings.append(
+            "JS 里用了不存在的 col_type: "
+            + ", ".join(sorted(bad_literals))
+            + "（官方 45 个样式里没有它，真机会渲染异常；见 references/col_type.md，常见误用是 list_1 → 改用 text_center_1/blank_block）"
+        )
 
     # ---- 搜索 ----
     su = str(rule.get("search_url", ""))
@@ -201,12 +237,35 @@ def validate(path):
         if "@Referer=" not in text_all and "@headers=" not in text_all:
             warnings.append("图片规则未发现 @Referer= / @headers= 防盗链设置，图可能裂")
 
-    # ---- ES5 静态检查 ----
-    for fname, code in _js_fields(rule):
+    # ---- 反模式扫描（原始 JSON 文本 + 反转义后的 JS 字段） ----
+    all_js = "\n".join(_strip_js(c) for _f, c in js_bodies)
+    for pat, kind, msg in ANTI_PATTERNS:
+        if pat.search(raw) or pat.search(all_js):
+            (warnings if kind == "warn" else notices).append(msg)
+
+    # ---- ES 语法检查（兼容性提示，不算错误） ----
+    for fname, code in js_bodies:
         body = _strip_js(code)
         hits = [msg for pat, msg in ES6_PATTERNS if pat.search(body)]
         if hits:
-            warnings.append(f"{fname} 含 ES6+ 语法（设备端会报错，本机 Node 可跑通）：{'; '.join(hits)}")
+            notices.append(
+                f"{fname} 含 ES6+ 语法：{'; '.join(hits)} —— "
+                "新版海阔引擎支持 ES6+（官方文档示例即用 let/const/箭头函数），但旧版仅支持 ES5；"
+                "本库默认写 ES5 以兼容所有版本。真机实测 ES6 可用时此提示可忽略。"
+            )
+
+    # ---- 结构性提示（不阻塞） ----
+    if all_js:
+        if "MY_URL" not in all_js and "getParam(" in all_js:
+            notices.append("JS 里用了 getParam(...) 但没见 MY_URL —— 占位 URL 的 query 不一定保留，详情参数建议从 MY_URL 解析（见 references/pitfalls.md §二.6）")
+        if "MY_KEYWORD" not in all_js and "getParam(" in all_js and str(rule.get("searchFind", "")).strip():
+            notices.append("搜索解析里未见 MY_KEYWORD —— 搜索词建议用内置变量 MY_KEYWORD 而非 getParam('kw')")
+        if "#immersiveTheme#" not in raw and t == "video" and ("@rule=" in raw or "lazyRule" in raw):
+            notices.append("视频规则跳详情未发现 #immersiveTheme# —— 详情页顶部可能留白（见 references/detail_layout.md §1）")
+        if not re.search(r"""url\s*:\s*['"]javascript:""", all_js) and "col_type" in all_js and t == "video":
+            notices.append("未见 url:'javascript:;' —— 海报卡/简介等纯展示项应设它以免误跳转（见 references/pitfalls.md §一.5）")
+        if "#isVideo=true#" not in raw and t == "video" and "m3u8" in all_js:
+            notices.append("JS 里出现 m3u8 但没有 #isVideo=true# —— 确认播放直链已加媒体标识")
 
     deps, notes = detect_dependencies(path, rule)
 
@@ -227,13 +286,17 @@ def validate(path):
         print("\n[警告]")
         for w in warnings:
             print(f"  - {w}")
+    if notices:
+        print("\n[提示]（兼容性/优化建议，不影响通过）")
+        for n in notices:
+            print(f"  - {n}")
     if errors:
         print("\n[错误]")
         for e in errors:
             print(f"  - {e}")
-        return 1, errors, warnings
+        return 1, errors, warnings, notices
     print("\n校验通过 ✓")
-    return 0, errors, warnings
+    return 0, errors, warnings, notices
 
 
 def main():
@@ -243,9 +306,15 @@ def main():
         print("用法: python validate_rule.py <rule.json 或 目录> [--json]")
         sys.exit(2)
     path = args[0]
-    code, errors, warnings = validate(path)
+
+    # --json 时人类可读报告走 stderr，stdout 只留纯 JSON，方便管道解析
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        code, errors, warnings, notices = validate(path)
+    human = buf.getvalue()
 
     if as_json:
+        sys.stderr.write(human)
         try:
             with open(path, encoding="utf-8") as f:
                 rule = json.loads(f.read().lstrip("\ufeff"))
@@ -254,9 +323,11 @@ def main():
         deps, notes = detect_dependencies(path, rule)
         print(json.dumps({
             "path": path, "ok": code == 0,
-            "errors": errors, "warnings": warnings,
+            "errors": errors, "warnings": warnings, "notices": notices,
             "dependencies": deps, "notes": notes,
         }, ensure_ascii=False, indent=2))
+    else:
+        sys.stdout.write(human)
     sys.exit(code)
 
 

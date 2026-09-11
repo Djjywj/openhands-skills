@@ -14,7 +14,7 @@
 //      getParam、getVar/putVar/getMyVar/getItem、$ 工厂、MY_URL/MY_PAGE 等
 //   ✅ 本地文件/图片 API 垫片：fileExist/getPath/writeHexFile/writeFile/readFile/saveImage
 //      （hiker://files/ 映射到系统临时目录，验证「加密封面落地文件」类优化）
-//   ✅ ES5 语法静态检查（Hiker JSEngine 仅 ES5）
+//   ℹ️ ES 语法提示（ES6+ 兼容性提示，旧版海阔仅支持 ES5）
 //
 // 不能测（需真机 / 海阔视界 app）:
 //   ❌ 实际 UI 渲染长相、播放嗅探
@@ -428,9 +428,11 @@ async function main() {
   code = code.replace(/^js:\s*/, '');
   const esHits = lintES5(code);
   if (esHits.length) {
-    console.log('\n⚠️ [ES5 合规检查] 检测到 ES6+ 语法，海阔设备端 JSEngine(仅 ES5)会报错！');
+    console.log('\nℹ️ [ES 语法提示] 检测到 ES6+ 语法（兼容性提示，不算错误）：');
     esHits.forEach((m) => console.log('   - ' + m));
-    console.log('   说明: 本桩运行在 Node 上仍能通过，但真机会失败。请改为 var / function / 普通 for。');
+    console.log('   说明: 新版海阔 JSEngine 支持 ES6+（官方文档示例即用 let/const/箭头函数），');
+    console.log('         但旧版仅支持 ES5。本库默认写 ES5 以兼容所有版本；真机实测 ES6 可用则可忽略本提示。');
+    console.log('         注意: 本桩跑在 Node 上，ES6 一定通过 —— 所以“PC 通过”不能证明“真机通过”。');
   }
   if (!code.trim()) { console.log('\n[警告] ' + o.rule + ' 为空，无内容可测。'); return; }
 
