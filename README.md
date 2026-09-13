@@ -59,6 +59,7 @@ skills/
 | [deliver-files-as-attachments](skills/deliver-files-as-attachments/SKILL.md) | 把生成/导出的文件保存为真实工作区文件并提供下载，而不是只在对话里打印。 |
 | [image-processing](skills/image-processing/SKILL.md) | 理解、检查或以编程方式转换已有图片（缩放、裁剪、格式转换、压缩等）。 |
 | [read-special-images](skills/read-special-images/SKILL.md) | 读取/OCR 长截图、全景图、高分辨率图和密集文档（必要时切片）。 |
+| [agent-canvas-upload-limit](skills/agent-canvas-upload-limit/SKILL.md) | 解除 Agent Canvas 前端的上传体积限制（默认 3MB），镜像升级后重跑一次即可；含安全校验，结构变了会拒绝动手。 |
 
 ## 如何添加新技能
 
