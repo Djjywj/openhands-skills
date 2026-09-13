@@ -45,7 +45,6 @@ skills/
 | [默认助手](skills/默认助手.md) | 全程简体中文、面向电脑小白的交流规则 |
 | [自动识别图片](skills/自动识别图片.md) | 每轮自动检查消息里的图片并静默处理 |
 | [每周自我复盘](skills/每周自我复盘.md) | 每周自动复盘：采集活动 → 提炼经验 → 更新技能 |
-| [上传限制自动维护](skills/上传限制自动维护.md) | 每轮自动检查 Agent Canvas 上传限制，需要就自己打补丁；已解除则保持沉默 |
 
 ### 其他技能
 
@@ -60,7 +59,7 @@ skills/
 | [deliver-files-as-attachments](skills/deliver-files-as-attachments/SKILL.md) | 把生成/导出的文件保存为真实工作区文件并提供下载，而不是只在对话里打印。 |
 | [image-processing](skills/image-processing/SKILL.md) | 理解、检查或以编程方式转换已有图片（缩放、裁剪、格式转换、压缩等）。 |
 | [read-special-images](skills/read-special-images/SKILL.md) | 读取/OCR 长截图、全景图、高分辨率图和密集文档（必要时切片）。 |
-| [agent-canvas-upload-limit](skills/agent-canvas-upload-limit/SKILL.md) | 解除 Agent Canvas 前端的上传体积限制（默认 3MB），镜像升级后重跑一次即可；含安全校验，结构变了会拒绝动手。 |
+| [agent-canvas-upload-limit](skills/agent-canvas-upload-limit/SKILL.md) | 按需解除 Agent Canvas 前端的上传体积限制（默认 3MB）。用户升级镜像后说一声再调用；含安全校验，结构变了会拒绝动手。 |
 
 ## 如何添加新技能
 

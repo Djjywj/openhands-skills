@@ -9,7 +9,9 @@ Agent Canvas 前端把上传上限写死在构建产物里（单文件 3MB）。
 所以只要改掉前端那两个常量，就能传大文件。
 
 **这个限制会随镜像升级回来**，因为镜像里没有任何启动钩子目录。所以本技能的核心动作是：
-每次镜像升级后（或用户说上传传不上去时）重跑一次脚本。
+**用户升级镜像后主动来说一声**（或用户说上传传不上去时），才重跑一次脚本。
+
+⚠️ **不要每轮自动检查、不要在用户没提的时候主动打补丁**——用户明确要求按需执行，不做自动维护。
 
 ## 第一步：先看现在是什么状态
 
@@ -68,15 +70,15 @@ sudo python3 ~/.openhands/skills/agent-canvas-upload-limit/scripts/upload_limit_
 
 | 命令 | 用途 |
 |---|---|
-| `sudo python3 upload_limit_patch.py --auto` | 每轮自动自检：已打过就安静退出，需要才打（只报一行） |
+| `sudo python3 upload_limit_patch.py --auto` | 一行输出模式，供用户要求自动化时使用；**平时不要主动跑** |
 | `sudo python3 upload_limit_patch.py` | 人工打补丁，输出完整自检过程（已打过则转为检查） |
 | `python3 upload_limit_patch.py --check` | 只看状态，不改文件，不需要 sudo |
 | `sudo python3 upload_limit_patch.py --restore` | 还原成 3MB |
 | `sudo python3 upload_limit_patch.py --force` | 跳过冒烟测试的安全判定（镜像已改版时用） |
 | `node verify_upload_logic.js --expect-patched` | 单跑上传校验逻辑用例 |
 
-**自动模式已接上常驻技能** `skills/上传限制自动维护.md`：每轮对话开始时会静默跑一次 `--auto`，
-所以升级镜像后不需要用户开口，补丁就自己回来了。已打过时它一个字都不输出。
+`--auto` 保留着，但**不要主动跑**：用户明确说过升级后会自己来通知，不需要每轮自动检查。
+只在用户主动提起上传限制时才动手。
 
 ## 文件说明
 
