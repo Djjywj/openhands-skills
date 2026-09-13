@@ -159,7 +159,32 @@ You MUST complete each phase before proceeding to the next.
    - Didn't work? Form NEW hypothesis
    - DON'T add more fixes on top
 
-4. **When You Don't Know**
+4. **A Control That Doesn't Exercise the Variable Proves Nothing**
+
+   **Before you attribute "it works" or "it breaks" to a variable, confirm every
+   group you are comparing actually contains that variable.**
+
+   A control group that silently skips the code path under test is not a control —
+   it is a different experiment. Reasoning from it produces confident, wrong
+   root causes, and every fix built on them fails.
+
+   **Real failure (2026-09-13):** diagnosing why a patched game map bounced back to
+   the menu, I compared a set of "works" maps against "fails" maps and concluded
+   "the loading-screen text causes it". But every "works" map had **no patch code
+   at all** (empty function or untouched original) — so they proved nothing about
+   whether the *patch* was safe. Two independent causes were actually in play, and
+   fixing only the one I "proved" wasted three build iterations.
+
+   **Checklist before trusting a comparison:**
+   - Does each group actually run the code being tested? Verify, don't assume.
+   - Is the variable under test the *only* difference between groups?
+   - Would this group pass even if my hypothesis were false? If yes → not a control.
+
+   **For byte/config artifacts:** compare the *actual bytes/values at the location
+   you changed* (read it back), not just "file opens fine" or "checksum matches".
+   A harness can be green while the change never landed.
+
+5. **When You Don't Know**
    - Say "I don't understand X"
    - Don't pretend to know
    - Ask for help
