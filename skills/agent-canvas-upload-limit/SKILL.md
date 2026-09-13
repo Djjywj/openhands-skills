@@ -68,11 +68,15 @@ sudo python3 ~/.openhands/skills/agent-canvas-upload-limit/scripts/upload_limit_
 
 | 命令 | 用途 |
 |---|---|
-| `sudo python3 upload_limit_patch.py` | 打补丁（已打过则自动转为检查） |
+| `sudo python3 upload_limit_patch.py --auto` | 每轮自动自检：已打过就安静退出，需要才打（只报一行） |
+| `sudo python3 upload_limit_patch.py` | 人工打补丁，输出完整自检过程（已打过则转为检查） |
 | `python3 upload_limit_patch.py --check` | 只看状态，不改文件，不需要 sudo |
 | `sudo python3 upload_limit_patch.py --restore` | 还原成 3MB |
 | `sudo python3 upload_limit_patch.py --force` | 跳过冒烟测试的安全判定（镜像已改版时用） |
 | `node verify_upload_logic.js --expect-patched` | 单跑上传校验逻辑用例 |
+
+**自动模式已接上常驻技能** `skills/上传限制自动维护.md`：每轮对话开始时会静默跑一次 `--auto`，
+所以升级镜像后不需要用户开口，补丁就自己回来了。已打过时它一个字都不输出。
 
 ## 文件说明
 

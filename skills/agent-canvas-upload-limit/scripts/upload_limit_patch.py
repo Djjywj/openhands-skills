@@ -26,7 +26,9 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
+import io
 import json
 import os
 import re
@@ -348,10 +350,56 @@ def cmd_restore(target: Path) -> int:
     return 0
 
 
+def cmd_auto(target: Path) -> int:
+    """给「每次对话自动跑一次」用：已打过就完全安静，需要打才动手并只报一行。
+
+    详细日志（逐条自检、英文堆栈）留给人工排障；自动模式只做到三件事：
+    结构不认识时别乱动、能打就打、打了说一句话。任何自检不过都回滚。
+    """
+    blob = target.read_bytes()
+    if PATCH_MARKER in blob:
+        return 0  # 已解除，保持沉默，不占上下文
+
+    missing = [t for t in ORIGINAL_TAGS if t not in blob]
+    if missing:
+        print(f"[上传限制] 本镜像前端结构变了，补丁没敢动（缺标签 {missing[0][:32]!r}）。"
+              f"需要时跑：sudo python3 {Path(__file__).resolve()} --check", flush=True)
+        return 0
+
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        pre_patch = blob
+        if not smoke_test():
+            print("安全检查未通过", end="")
+        else:
+            backup(target)
+            try:
+                do_patch(target)
+            except RuntimeError as e:
+                print(f"改写失败：{e}", end="")
+            else:
+                if len(target.read_bytes()) != len(blob) or PATCH_MARKER not in target.read_bytes() \
+                        or syntax_ok(target) is False or logic_ok() is False:
+                    print("改写自检未通过", end="")
+                else:
+                    check_served_matches_disk(target)
+
+    if _failed or "未通过" in buf.getvalue() or "失败" in buf.getvalue():
+        rollback(target, pre_patch)
+        print("[上传限制] 自动打补丁未通过自检，已回滚，界面保持原样。"
+              f"需要排查请跑：sudo python3 {Path(__file__).resolve()} --check", flush=True)
+        return 1
+    print("上传限制已自动解除（单文件 3MB → 500MB，合计 5TB）。"
+          "浏览器请按 Ctrl+Shift+R 强制刷新。", flush=True)
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="解除 Agent Canvas 前端上传上限")
     ap.add_argument("--check", action="store_true", help="只核对线上文件与磁盘是否一致")
     ap.add_argument("--restore", action="store_true", help="还原成原始的 3MB 上限")
+    ap.add_argument("--auto", action="store_true",
+                    help="给每轮自动自检用：已打过就安静退出，需打补丁才动手（只报一行）")
     ap.add_argument("--force", action="store_true", help="跳过冒烟测试的安全判定")
     args = ap.parse_args()
 
@@ -366,6 +414,9 @@ def main() -> int:
 
     if args.restore:
         return cmd_restore(target)
+
+    if args.auto:
+        return cmd_auto(target)
 
     blob = target.read_bytes()
     if PATCH_MARKER in blob:
