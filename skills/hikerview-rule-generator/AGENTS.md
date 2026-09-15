@@ -41,8 +41,7 @@ node .agents/skills/hikerview-rule-generator/scripts/test_juyue.js path/to/parse
   但**已支持 CryptoJS**：`scripts/test_rule.js` 内置 `getCryptoJS()` 垫片（Node `crypto` 还原 AES 的 CBC/ECB/Pkcs7），含 AES 加密接口的规则可在 PC 端打真实接口验证；`--vid` 喂详情参数。用法见 `references/crypto_sign.md`。
 - `scripts/test_rule.js` 支持 `--vid <id>`，并把 `--fyclass/--fypage/--kw` 同时映射到规则里的 `getParam('t'/'p'/'k')` 别名。
 - `scripts/test_rule.js` 的 `--url` 会同时作为 `MY_URL`（真机当前页地址），并把 URL 里的中文 `？？` 还原成 `?`，便于测 POST 详情页传参。
-- 仓库还装有通用图像技能：`.agents/skills/read-special-images/`（长图/超宽图切片，
-  用 `scripts/slice_image.py`，依赖 Pillow）与 `.agents/skills/image-processing/`（图像识别/裁剪/缩放/格式转换/传统 CV 指引）。
+- 仓库还装有通用图像技能：`.agents/skills/see-images/`（读图：`scripts/look.py` 调视觉模型；长截图/全景图用 `scripts/slice_image.py` 切片，依赖 Pillow）与 `.agents/skills/image-processing/`（裁剪/缩放/格式转换/传统 CV 指引）。
 
 ## 已完成产出
 

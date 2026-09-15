@@ -57,8 +57,9 @@ skills/
 | [hikerview-rule-generator](skills/hikerview-rule-generator/SKILL.md) | 自动生成、校验、迭代海阔视界（Hiker View）观看规则 rule.json / 小程序规则 / 聚阅子程序。 |
 | [chinese-beginner](skills/chinese-beginner/SKILL.md) | 为电脑小白提供简体中文、少量步骤、清楚易懂的操作指导。 |
 | [deliver-files-as-attachments](skills/deliver-files-as-attachments/SKILL.md) | 把生成/导出的文件保存为真实工作区文件并提供下载，而不是只在对话里打印。 |
-| [image-processing](skills/image-processing/SKILL.md) | 理解、检查或以编程方式转换已有图片（缩放、裁剪、格式转换、压缩等）。 |
-| [read-special-images](skills/read-special-images/SKILL.md) | 读取/OCR 长截图、全景图、高分辨率图和密集文档（必要时切片）。 |
+| [image-processing](skills/image-processing/SKILL.md) | 确定性处理图片文件：缩放、裁剪、格式转换、压缩、传统 CV（读取/描述图片请看 see-images）。 |
+| [see-images](skills/see-images/SKILL.md) | 读图：把图片交给视觉模型，返回文字后回答；含长截图/全景图切片（必要时）与聊天图片定位。 |
+| [imagegen](skills/imagegen/SKILL.md) | 文生图：用文字描述生成新图片，免 API Key。来源：[pollinations/pollinations](https://github.com/pollinations/pollinations)（5070★，MIT；本仓库仅封装其 HTTP 接口，未复制其代码）。 |
 | [agent-canvas-upload-limit](skills/agent-canvas-upload-limit/SKILL.md) | 按需解除 Agent Canvas 前端的上传体积限制（默认 3MB）。用户升级镜像后说一声再调用；含安全校验，结构变了会拒绝动手。 |
 
 ## 如何添加新技能
