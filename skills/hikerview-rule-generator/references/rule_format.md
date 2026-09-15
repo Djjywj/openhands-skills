@@ -31,15 +31,34 @@
 > `class_name` / `class_url` 必须数量一致、顺序对应。`area/sort/year` 留空字符串即可，不影响基本功能。
 > 完整字段以 EcoHub 为基准（纯规则无依赖模板见 `assets/templates/video_rule.json`），`sdetail_col_type`/`sdetail_find_rule`/`ua` 是可选的二级详情嗅探字段。
 
+### 1.1 三个"文档里查不到、但 App 真在用"的字段
+
+以下字段**不在官方在线文档**，但 **App 内置默认规则模板**（`app/src/main/assets/home.json`、`homeSubView.json`）与**真实语料**里都在用，可放心填写：
+
+| 字段 | 作用 | 取值 | 语料使用量 |
+|------|------|------|-----------|
+| `firstHeader` | 首页**第一个筛选行**用哪个维度（渲染成分类栏） | `class` / `year` / `sort` | 304/2070（301 为 `class`） |
+| `titleColor` | 首页标题栏颜色 | 颜色值，如 `"#ff148e8e"`；空串=默认 | 563/2070（**8 位 ARGB 居多**） |
+| `proxy` | 网络请求代理（一行一条 `原地址=>新地址`） | 见下方说明 | 5/2070（少见） |
+
+- `firstHeader` 体现的语义：App 内置模板 `home.json` 就是 `"firstHeader": "class"`，即把 `class_name/class_url` 那套**系统分类栏**摆在第一行（配合 `col_type: movie_2`）。它与"自绘 `scroll_button` 分类"（见 `detail_layout.md`）是两种路线——**实测语料里二者同时出现的只有 25/304（8%），绝大多数源二选一**。同时用会出现两排重复分类，令用户困惑；要么只用系统分类栏，要么只自绘。
+- `titleColor` 是**主题色**，和 `col_type.md` 里"8 位 ARGB 不被识别"的颜色坑**不是一回事**：布局 HTML 里的 `color="#RRGGBB"` 必须 6 位，但 `titleColor` 这个顶层字段语料里恰恰以 8 位 ARGB 为主。
+- `proxy` 格式为**一行一个** `原地址=>新地址`，对 `fetch`/`request`/`require`/`requireCache`/首页链接/搜索链接**全部生效**；默认**包含匹配**（`aaa.com=>bbb.net` 会把链接里含 `aaa.com` 的部分替换掉），想精确替换就写完整地址；新地址支持 `file://` / `hiker://` 本地路径。
+
 ## 2. 四类规则对应的 `type` 与 `group`
 
-| 用户选择 | `type` | `group` | `detail_col_type` | 详情要点 |
-|---------|--------|---------|-------------------|---------|
-| 视频 | `video` | `②视频` | `movie_1` | 播放地址加 `#isVideo=true#` |
-| 音频 | `audio` | `④音频` | `movie_1` | 直链 mp3/m4a，一般无需标记 |
-| 图片 | `image` | `①图片` | `pic_1` | 详情只展示大图 `pic_url` |
-| 杂类 | `other` | `⑤杂类` | `text_3` | 文本/网页型，按需自定义 |
+| 用户选择 | `type` | `group` | 详情要点 |
+|---------|--------|---------|---------|
+| 视频 | `video` | `②视频` | 播放地址加 `#isVideo=true#`；`detail_col_type: text_3` |
+| 音频 | `music` | `④音频` | 直链 mp3/m4a，一般无需标记；`detail_col_type: movie_1` |
+| 图片 | `picture` | `①图片` | 详情只展示大图 `pic_url`；`detail_col_type: pic_1` |
+| 杂类 | `other` | `⑤杂类` | 文本/网页型，按需自定义；`detail_col_type: text_3` |
 
+> ⚠️ **`type` 取值以真实生态为准**：App 源码**不校验** `rule.type`（只对嗅探用的 `MediaType` 做校验），
+> 因此"音频用 `audio`、图片用 `image`"这类写法**不会被报错，但也不是社区惯例**。
+> 2070 条真实规则里音频类一律写 **`music`**、图片类一律写 **`picture`**（`audio`/`image` 各 0 条）。
+> 同为生态常用的还有：`cartoon`（漫画）、`read`（阅读）、`live`（直播）、`news`（资讯）、`tool`（工具/程序）、`all`（框架/聚合）。
+> **新写规则优先用生态实际在用的值**；本 skill 早期模板的 `audio`/`image` 仅为兼容保留（`validate_rule.py` 两者都不再报警）。
 > 分组序号是约定俗成的展示顺序，不影响功能，照填即可。
 
 ## 3. 常用 `col_type` 取值
@@ -110,12 +129,18 @@ setResult(d);   // 输出；老版本若报错改 setHomeResult(d)
 - 视频直链后加 `#isVideo=true#` 让 app 识别为可播视频
 - 详情 url 可加 `#immersiveTheme#` 进入沉浸播放
 
-> ⚠️ **海阔 lazyRule 正确写法**（海阔工具文档）：`$(url, param).lazyRule(func)` 工厂，等价字符串 `url + '@lazyRule=' + param + '.js:' + $.toString(func)`。`param` 是"解析 url 的表达式"（选择器，可空字符串 `''`），`func` 是处理响应的函数，函数内 `input` = 当前 url 响应、`fetch` 同步可用。**不要在普通字符串上直接 `.lazyRule()`**（会报 `TypeError: 对象 ... 不存在方法 lazyRule`——字符串没这方法，得用 `$()` 工厂或 `$.toString`）。
+> ⚠️ **海阔 lazyRule 正确写法**（官方工具文档）：优先用 `$(url, param).lazyRule(func)` 工厂，它等价于字符串 `url + '@lazyRule=' + param + '.js:' + $.toString(func)`。`param` 是"解析 url 的表达式"（选择器，可空字符串 `''`），`func` 是处理响应的函数，函数内 `input` = 当前 url 响应、`fetch` 同步可用。**不要在普通字符串上直接 `.lazyRule()`**（会报 `TypeError: 对象 ... 不存在方法 lazyRule`——字符串没这方法，得用 `$()` 工厂或 `$.toString`）。
 >
-> ❌ **`@lazyRule=` 形式实际不可用**：func 内含 `#isVideo=true#` 等 `# ? ; &` 字符会被海阔 url 解析器截断（`#` 截 fragment、`?` 截 query、`;` 截修饰符），导致 lazyRule 解析失败报"链接为空，规则有误"。海阔的 `$().b64()` 也不支持编码 func 本身。
+> ✅ **`@lazyRule=.js:` 字符串形式是可用的，而且是主流**（2026-09 实测语料：2070 条规则里 `@lazyRule=.js:` 出现 **1268 次**，选择器形式 `@lazyRule=选择器` 216 次，工厂形式 `$().lazyRule` 76 次）。
+> 本库早期版本曾写"该形式实际不可用"，**经语料复核为错误结论，已更正**——它与"工厂形式可用"自相矛盾（工厂就是拼出这个字符串）。
 >
-> ✅ **按需取真实地址（进详情 0 秒）实际不可行**（海阔 API 限制）。
-> ✅ **推荐方案：detail_find_rule 同步 `fetch`**：进详情多等几秒，但无 lazyRule 语法风险。手机/电影（≤4 集）≈2-4 秒，电视剧（≥16 集）≈16-32 秒。配合 `try/catch` 兜底，失败降级中转页直链。
+> ⚠️ **唯一要小心的**：func 体里出现**裸的 `#` `?` `;`** 时可能被 URL 解析器当成 fragment/query/修饰符切走（`#` 尤甚）。
+> 但真实规则里有 **64 处**在 func 内直接写了 `#isVideo=true#` 仍能正常工作（如返回 `url+'#isVideo=true#'`），说明并非一律致命。
+> **稳妥做法**：func 里尽量避免裸 `#`；确需带标签时优先用 `$().lazyRule()` 工厂，或把标签拼在**外层返回的 url** 上而不是 func 源码里。
+>
+> ➖ 结论修正后，**`@lazyRule` 与"detail_find_rule 同步 `fetch`"都是可行方案，按场景二选一**：
+> - 解析要**快速返回、或需要点击时才请求** → 用 `@lazyRule`（省一次进详情的请求）。
+> - 解析需**多次请求、复杂逻辑、或要携带大量标签** → 用 `detail_find_rule` 同步 `fetch`（无拼接语法风险）。
 
 ### 5.3 详情页取真实播放 / 音频地址的常见套路
 

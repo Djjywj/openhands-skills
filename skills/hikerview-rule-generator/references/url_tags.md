@@ -1,5 +1,11 @@
 # URL 占位符、请求修饰符与 #标签#（官方 help_rules/help_link/help_tag 蒸馏）
 
+> 🔒 **权威来源说明**（2026-09 核对）：`#标签#` 表以 **App 源码** `app/src/main/assets/help_tag.json`（24 条）为准，
+> 另有 `#ignoreM3U8#` / `#isM3u8#`（在 `help_film_list_rules.json` / `help_rules.json`，用于嗅探识别优化）。
+> **`help_tag.json` 里没有的标签不要写**——像 `#concat#`、`#memoryPage#`、`#fastPlayMode#`、`#threads=N#`、`#checkMetadata=false#` 等
+> 在 App 内置文档里查不到（网上第三方资料偶有流传，属**未证实**）。需要时以真机实测为准，别当既成事实写进规则。
+> 同理 `#pre#` / `#noPre#` / `#originalSize#` 确有收录（分别见下），可放心用。
+
 ## 1. 占位符
 | 占位符 | 含义 |
 |---|---|

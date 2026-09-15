@@ -118,6 +118,16 @@
 - **判断标准**：`pdfa`/`pdfh` 命中 0 就换正则，别死磕。
 - **口诀**：`取属性，正则稳，pdfa 命中零就换手`。
 
+### 11b. 链接取出来是 `/detail/1` 这种相对地址，点进去打不开
+- **症状**：PC 桩跑出来链接是 `/detail/1`，真机点卡片跳错/空白。
+- **根因**：**`pd` 和 `pdfh` 行为不同**（官方文档明确）：
+  - `pd`（=`parseDom`）**会自动补全**域名与 `http://` 前缀；
+  - `pdfh`（=`parseDomForHtml`）、`pdfa`（=`parseDomForArray`）**不补全**，原样返回。
+  所以 **取 `href`/`src` 这类链接必须用 `pd`**；用 `pdfh` 取就会拿到相对地址。
+- **修法**：把取链接的 `pdfh(x,'a&&href')` 改成 `pd(x,'a&&href')`。若真要手动拼绝对地址，海阔**没有** `joinUrl`/`concatUrl` 这类内置函数，得自己写：`url.indexOf('http') === 0 ? url : 'https://站点域名' + url`。
+- **判断标准**：桩里输出的「链接」不是 `http(s)://` 开头，就是这个坑。
+- 📌 本库 PC 桩已按真实行为对齐（`scripts/test_rule.js` 内自带的 `joinUrl` 辅助函数模拟 `pd` 的补全），所以**桩里能看出这个问题**，别以为是桩的 bug。
+
 ### 12. 苹果CMS(stui) 详情页多线路对不上号
 - **结构**：线路名在 `<h3 class="title">` 里，每个线路对应后面一个 `<ul class="stui-content__playlist">`。
 - **修法**：不要用 `pdfa` 硬绑 class，**按出现顺序把「线路名 h3」与「其后的 ul」配对**（扫描全部 h3 位置 + 全部 ul 位置，为每个 ul 找最近的前置 h3）。
@@ -196,10 +206,13 @@
 
 采纳 wsh-feiyu/hikerskill 内容时发现的问题，记录在此避免连带抄错：
 
-1. **`list_1` 不是合法 `col_type`**。官方 `help_col_type.md` 共 45 个样式，**没有 `list_1`**。该外部技能的空态提示用了 `col_type:'list_1'`（`search-implementation.md` §3），照抄会渲染异常。
+1. **`list_1` 不是合法 `col_type`**。**权威依据是 App 源码**（`app/src/main/assets/help_col_type.json` 收录 48 个 + `ArticleColTypeEnum.java` 另有 `pic_1_card`/`big_blank_block`），**没有 `list_1`**。该外部技能的空态提示用了 `col_type:'list_1'`（`search-implementation.md` §3），照抄会渲染异常。
    ✅ 空态/提示行请用 **`text_center_1`**、**`text_1`** 或 **`blank_block`**。
+   > 📌 本库旧文写"官方 `help_col_type.md` 共 45 个"，**已过时**：在线文档比 App 内置资源少 3 个（`icon_3_fill`/`icon_3_round_fill`/`card_pic_3_center`）。**以 App 为准**，`validate_rule.py` 已按 App 校准。
 2. **`setDesc` 不是内置 API**。那是该技能自己定义的一个辅助函数名（`function setDesc(d, desc, num){...}`），不是海阔函数。别在规则里直接调 `setDesc(...)` 而不定义它。
-3. **示例代码混用 ES6**（`let`/`const`/箭头函数/模板字符串）。与本库"默认写 ES5"的保守约定冲突 —— 带 `=>` 的代码**不能**直接进本库默认产出的规则。详见 `SKILL.md` 注意事项里的语法版本说明。
+3. **示例代码混用 ES6**（`let`/`const`/箭头函数/模板字符串）。本库默认产出走 ES5 保守约定。
+   > 📌 但要分清：这是**约定**不是**技术限制**。实测 2070 条真实规则里，含箭头函数 `=>` 的占 **25%**、`let` **35.8%**、`const` **16.7%**、模板字符串 **5.0%** —— 新版引擎能吃 ES6。
+   > 所以：**自家产出统一 ES5**（兼容旧版最稳）；看到他人规则用 ES6，不代表写错了，别去"修"它。详见 `rule_recipes.md`「通用约定」。
 4. **口诀里的强调前缀被编码搞坏了**。该库多处写成 `‘‘’’`（U+2018 U+2018 U+2019 U+2019），但正文里出现过 `\u2018\u2018\u2019\u2019` 与"固定为 `‘‘’’`（两个左引号+两个右引号）"两种描述混排，抄之前先按 `col_type.md` 的官方说明确认前缀字符。
 5. **该库没有 PC 验证能力**（其 SKILL.md 自述"不内置模拟器，一切以 App 实测为准"）。本库有 `test_rule.js` / `run_rule_js.mjs` / `test_juyue.js`，**规则必须先在本机跑通再谈真机**。
 

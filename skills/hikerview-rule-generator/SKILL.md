@@ -12,11 +12,13 @@ description: 自动生成、校验、迭代海阔视界（Hiker View）观看规
 | 文件 | 内容 |
 |------|------|
 | `references/rule_format.md` | 完整字段规范、`find_rule` 写法、详情页取址套路、依赖打包 |
+| `references/rule_recipes.md` | **写法骨架速查**（从 2070 条真实规则实测）：四套主流骨架怎么选、返回 API 怎么挑、字段名/API 使用率、`pd` vs `pdfh` 补全差异 |
 | `references/rule_patterns.md` | 真实架构写法（纯规则/聚阅宿主/子程序/跨规则程序/Q模板/自包含/模块化单例引擎/**从影视 APK 反查后端**）、短视频流与登录态判定、依赖识别 |
 | `references/pitfalls.md` | **真机实战坑位速查**（症状→根因→修法，按链接接管/参数传递/JS作用域/解析/详情播放/持久化/调试/交付安装分类；附「外部经验不要照抄」清单与封面统一 16:9 手法） |
 | `references/detail_layout.md` | **详情页布局硬性规范** + 可直接复制的 ES5 实现（海报卡 / 可折叠简介 / 线路切换 / 剧集动态列数 / 空态） |
 | `references/checklist.md` | **交付前自检清单**（通用 / PC 验证 / 首页搜索 / 详情 / 播放 / 特殊站点 / 交付 / 真机六关） |
-| `references/col_type.md` | 全部 `col_type` 布局样式（官方 help_col_type 蒸馏） |
+| `references/col_type.md` | 全部 `col_type` 布局样式（以 **App 源码** 为准，48+2 个） |
+| `references/community_repos.md` | **GitHub 社区仓库索引**（规则合集/源码/工具去哪找）+ 从 2070 条真实规则量出的字段使用率、`type` 分布、检索技巧 |
 | `references/url_tags.md` | 占位符、请求修饰符、`#标签#`、多线路/字幕/弹幕、进度记忆 |
 | `references/js_api.md` | JS 内置 API 速查（请求/DOM/编解码/变量/页面/媒体/模块） |
 | `references/link_protocols.md` | `hiker://` 等伪协议、子页面、二级列表、导入口令格式 |
@@ -52,10 +54,12 @@ description: 自动生成、校验、迭代海阔视界（Hiker View）观看规
 
 | 种类 | type | group | 模板 |
 |------|------|-------|------|
-| 图片 | image | ①图片 | assets/templates/image_rule.json |
+| 图片 | picture | ①图片 | assets/templates/image_rule.json |
 | 视频 | video | ②视频 | assets/templates/video_rule.json |
-| 音频 | audio | ④音频 | assets/templates/audio_rule.json |
+| 音频 | music | ④音频 | assets/templates/audio_rule.json |
 | 杂类 | other | ⑤杂类 | assets/templates/misc_rule.json |
+
+> ⚠️ **`type` 取值以真实生态为准**：App 源码不校验 `rule.type`，但 2070 条真实规则里**音频一律 `music`、图片一律 `picture`**（`audio`/`image` 各 0 条）。本表已按生态惯例更新；生态另有 `cartoon`（漫画）/`read`（阅读）/`live`（直播）/`news`（资讯）/`tool`（工具）/`all`（框架）。
 
 > 📌 **生成后可在电脑上先验证（不必立刻上真机）**：本 skill 自带 `scripts/test_rule.js`（需 Node.js）。它能模拟海阔 JSEngine 跑 `find_rule` / `searchFind` / `detail_find_rule` 的 JS 解析逻辑，并模拟 `fyclass` / `fyarea` / `fysort` / `fyyear` / `fypage` 占位符替换拼出真实 URL，验证"爬得对不对"。
 > - **能测**：列表/搜索/详情的提取条数、标题、海报、链接、简介；筛选/排序参数是否真的改变列表；占位符 URL 拼法；纯 JS 的密码学（`eval(getCryptoJS())` + AES）也能在 PC 端跑通。
@@ -69,6 +73,13 @@ description: 自动生成、校验、迭代海阔视界（Hiker View）观看规
 用 `AskUserQuestion` 询问（二选一即可）：
 - 选项 A：**有，我发给你**（用户手头有现成规则包 / `rule.json`）
 - 选项 B：**没有，从零开始**
+
+> 🤖 **用户选 B 时，agent 应当自己去社区找参照**（不要空手就开写）：GitHub 上有大量现成的海阔规则合集，
+> 找**同类型**（视频/图片/音频/杂类）或**同架构**（纯规则/聚阅/Q模板）的源读一遍，能省掉大量逆向工作。
+> **索引与用法见 `references/community_repos.md`**（含各仓库定位、真实语料统计、GitHub 检索命令）。
+> 分工建议：**官方 App 源码**（`qiusunshine/hikerView`）用来**验证行为**（字段存不存在、解析器怎么切分、有哪些 col_type）；
+> **社区规则仓库**用来**找现成写法参照**（怎么组织 `find_rule`、分类栏、详情布局）。
+> ⚠️ 社区内容是第三方，**不可直接当事实**：能在官方文档 / App 源码找到出处的才照搬，否则标为"待验证"并写进 `pitfalls.md` §八。
 
 若用户选 A，告知其从海阔视界里**提取现有规则（小程序包）**的方法：
 
@@ -222,6 +233,8 @@ node <skill>/scripts/test_juyue.js parse.js --fn 分类 --fypage 2
 > **本库约定**：规则里的 `js:` 代码**默认用 ES5 写**（`var` / `function` / 普通 `for`），这样任何版本都能跑；**不是"用了 `=>` 就一定报错"**。
 > 若你手头的 App 版本实测 ES6 正常，或要移植的现成源本身就是 ES6，**可以放开**；拿不准就写 ES5。
 > `scripts/validate_rule.py` / `scripts/test_rule.js` 的 ES5 检查结果按**兼容性提示**看待（不算错误、不影响退出码）。
+> **补充实测（2070 条真实规则）**：含箭头函数 `=>` 的 **25%**、`let` **35.8%**、`const` **16.7%**、模板字符串 **5.0%** —— 印证 ES6 在新版引擎里普遍可用。详见 `references/rule_recipes.md`。
+> ⚠️ **不要反过来"修"别人的 ES6**：看到他人规则用 `let`/`=>` 不代表写错。
 > 💡 注意：本机 `test_rule.js` 跑在 Node 上，**ES6 在 PC 一定通过**，所以"PC 通过"不能证明"真机通过"——这也是本库仍推荐 ES5 的原因。
 
 - 永远以真实站点响应为准，不要臆测字段名；抓取不到就问用户要接口或页面片段。

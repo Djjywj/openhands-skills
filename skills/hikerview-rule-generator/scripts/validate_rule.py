@@ -18,21 +18,34 @@ import io
 import contextlib
 
 REQUIRED = ["title", "url", "type", "find_rule", "class_name", "class_url"]
-VALID_TYPES = {"video", "audio", "image", "other", "tool", "all"}
+# type：App 源码里没有对 rule.type 做枚举校验（只有嗅探用的 MediaType 才校验），
+# 故取值按 2070 条真实规则语料的生态约定。视频类 1013 / 其它类 327 / 工具 91 / 框架 63 /
+# 音乐 47 / 图片 40 / 阅读 33 / 直播 31 / 资讯 26 / 漫画 15；audio、image 在语料中为 0 条。
+VALID_TYPES = {
+    "video", "music", "picture", "cartoon", "read", "live", "news",
+    "other", "tool", "all",
+    "audio", "image",  # 本库早期模板用法，App 不校验，保留兼容
+}
 
-# 官方 help_col_type 收录的样式
+# col_type 清单：以 App 源码为准（app/src/main/assets/help_col_type.json 收录 48 个
+# + ArticleColTypeEnum.java 独有的 pic_1_card / big_blank_block）。
+# 在线文档 help_col_type.md 缺 icon_3_fill / icon_3_round_fill / card_pic_3_center，勿以它为准。
 VALID_COL_TYPES = {
     "movie_1", "movie_2", "movie_3", "movie_3_marquee",
     "movie_1_left_pic", "movie_1_vertical_pic", "movie_1_vertical_pic_blur",
     "text_1", "text_2", "text_3", "text_4", "text_5", "text_center_1",
     "long_text", "rich_text",
-    "pic_1", "pic_1_full", "pic_1_center", "pic_2", "pic_2_card", "pic_3", "pic_3_square",
-    "icon_1_search", "icon_2", "icon_2_round", "icon_4", "icon_4_card",
-    "icon_round_4", "icon_round_small_4", "icon_small_3", "icon_small_4",
+    "pic_1", "pic_1_full", "pic_1_center", "pic_1_card",
+    "pic_2", "pic_2_card", "pic_3", "pic_3_square",
+    "icon_1_search", "icon_2", "icon_2_round",
+    "icon_3_fill", "icon_3_round_fill",
+    "icon_4", "icon_4_card", "icon_round_4", "icon_round_small_4",
+    "icon_small_3", "icon_small_4",
     "text_icon", "avatar",
-    "line", "line_blank", "blank_block",
+    "line", "line_blank", "blank_block", "big_blank_block",
     "flex_button", "scroll_button", "input",
-    "card_pic_1", "card_pic_2", "card_pic_2_2", "card_pic_2_2_left", "card_pic_3",
+    "card_pic_1", "card_pic_2", "card_pic_2_2", "card_pic_2_2_left",
+    "card_pic_3", "card_pic_3_center",
     "x5_webview_single",
 }
 

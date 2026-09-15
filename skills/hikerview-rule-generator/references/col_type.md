@@ -3,6 +3,11 @@
 > 每个列表项都可单独设 `col_type`；不设则继承规则级 `col_type`。
 > 仅 `js:` 解析支持逐项混用（`it.col_type='text_3'`），原生 DOM 链/普通规则只能用规则级统一值。
 
+> 🔒 **权威清单**（2026-09 从 **App 源码 + App 内置资源**核对，比在线文档更全）：
+> - `app/src/main/assets/help_col_type.json` 收录 **48** 个（在线文档 `help_col_type.md` 少 3 个：`icon_3_fill`、`icon_3_round_fill`、`card_pic_3_center`）。
+> - `ArticleColTypeEnum.java` 另有 3 个**未进任何 help** 的：`pic_1_card`、`big_blank_block`（另 `header`/`footer` 是内部占位，不要手写）。
+> - **本 skill 的 `scripts/validate_rule.py` 的 `VALID_COL_TYPES` 已按此补全**。在线文档与 App 不一致时**以 App 为准**。
+
 ## 影视频道类
 | col_type | 说明 |
 |---|---|
@@ -45,6 +50,8 @@
 | `icon_round_small_4` | 圆形小图，一行四列 |
 | `icon_2` | 一行两列，左图右标题 |
 | `icon_2_round` | 左圆图右标题 |
+| `icon_3_fill` | 一行三列，左图标右文字（类似 `icon_2_round`，只是三列） |
+| `icon_3_round_fill` | 一行三列，左**圆形**图标右文字 |
 | `icon_1_search` | 单行"假输入框"，只能点击 |
 | `text_icon` | 左文字右图标 |
 | `avatar` | 头像样式，需 title+img，可选 desc 显示在右侧（支持富文本） |
@@ -55,6 +62,8 @@
 | `line` | 分割线 |
 | `line_blank` | 空白分割线（同 pic_1 分割线） |
 | `blank_block` | 空白块，宽=屏宽，高=1dp |
+| `big_blank_block` | 更大的空白块（比 `blank_block` 高，做大型间隔用） |
+| `pic_1_card` | 一行一列卡片式大图（`pic_1` 的卡片变体） |
 
 ## 按钮/输入
 | col_type | 说明 |
@@ -71,6 +80,7 @@
 | `card_pic_2_2` | 一行两列、每列上下两卡（连续 push 两个自动聚合，超过 2 个不显示），只用于右侧；`desc` 可填高度数字 |
 | `card_pic_2_2_left` | 同上，只用于左侧 |
 | `card_pic_3` | 一行三列，圆角矩形图 |
+| `card_pic_3_center` | 一行三列，圆角矩形图 + **文字居中**（`card_pic_3` 的居中版） |
 | `x5_webview_single` | 腾讯 X5 组件，宽=屏宽，高默认 240（可写 desc，`auto` 自适应）。**一个页面只能有一行**。常用 extra：`canBack`、`ua`、`js`、`jsLoadingInject`、`blockRules`、`referer`、`urlInterceptor`、`floatVideo`、`showProgress`、`autoPlay`、`imgLongClick`。高度可用 `desc:'float&&240'`、`'list&&video'`、`'list&&screen-100'` |
 
 ## 常见搭配建议

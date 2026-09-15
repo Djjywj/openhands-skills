@@ -77,6 +77,18 @@
 - `copy(text)`；`convertBase64Image(url)`；`getPath('hiker://files/a.txt')`。
 - 定时任务：`registerTask(id,timeMs,codeStr)` / `unRegisterTask(id)`。
 - 批量任务：`batchExecute(tasks, listener, successCount)`（缩写 `be`，最大 16 线程）；`syncExecute({func,param})`（线程同步）。
+- 本规则/历史/样式：`getRuleCount()`（返回**字符串**）、`getLastRules(count)`（常用历史规则）、`getColTypes()`（返回所有可选首页样式**字符串数组**）、`publishRule(rule)`（提交到云仓库）。
+- X5 刷新：`refreshX5WebView('http://1.com')`（刷新整个 X5 链接）、`refreshX5Desc('float&&255')`（只刷新高度等 desc，**不重载网页**）。
+- 加密代码：`evalPrivateJS(code)` 直接运行加密串 / `getPrivateJS(code)` 生成加密代码（**参数与返回都是字符串**）。加密串在「设置→开发者模式」里导出。
+  > ⚠️ 加密代码块里**不要引用非顶层作用域的变量或函数**（例如在箭头函数 `()=>{}` 里定义变量、又在加密块里直接引用该变量名）——把变量定义一起加密，或改用传参。
+- Java 字节码（**高危险，必须征得用户授权**）：`requireDownload(dexUrl,'hiker://files/cache/t.dex')` → `loadJavaClass('hiker://files/cache/t.dex','com.test.code.TestCode')`；携带 so 时第三个参数传 `'hiker://cache/dir/a.so'`（单个）或目录 `'hiker://cache/dir'`（多个）。`getCpuAbi()` 取手机 ABI（`arm64-v8a`/`armeabi-v7a`）。
+- 下拉选择框：`showSelectOptions({title:'选择性别', options:['选项一','选项二'], col:3, js:"'toast://你点击的是' + input"})`（`col` 列数默认 3）。
+- ajax 风格链式：`http.fetch(...).success(...).start()`。
+- 聚合搜索代理（**仅首页**）：`{col_type:'input', url:"'hiker://search?s='+input", extra:{rules:"fetch('hiker://files/rules.json')"}}`
+  - `extra.rules` 必须是**一段 JS 代码**（不是规则地址、也不是规则数组），执行后返回一个**数组字符串**（如 `JSON.stringify(data)`）。App 自带的搜索解析规则用不了此功能。
+- ⚠️ **下面两个网上流传、但在官方文档与 App 内置资源里都查不到，属未证实，暂不要用**：
+  `globalMap0`（声称"全局任意类型 Map"）、`shareDirectory`（声称"分享目录"）。
+  本库早期版本误将其当作官方 API 收录，**2026-09 复核后标注为未证实**；需要全局存储请用官方的 `setItem/getItem` / `putVar/getVar` / `putMyVar/getMyVar`。
 
 ## 9. 模块（$ 工具 / require）
 - `$.require(path, importParam)`：加载子页面/本地/远程模块，返回其 `$.exports`；path 支持 `hiker://page/xxx`（可省略 `hiker://page/`）。

@@ -60,6 +60,7 @@ function printHelp() {
   --fyclass 1 --fypage 1 --fyarea 美国 --fysort hits --fyyear 2024
   --top  <N>             打印前 N 条样例（默认 5）
   --dump <out.json>      结果写入 JSON
+  --selftest             自检桩本身（校验 pd 自动补全 / pdfh 不补全语义），不跑规则
   -h / --help            显示帮助
 
 说明: 本桩验证"爬得对不对"，不验证 UI 渲染与播放嗅探（需真机）。
@@ -83,6 +84,7 @@ function parseArgs(argv) {
     else if (a === '--fyyear') o.fy.fyyear = argv[++i];
     else if (a === '--vid') o.vid = argv[++i];
     else if (a === '-h' || a === '--help') { printHelp(); process.exit(0); }
+    else if (a === '--selftest') o.selftest = true;
     else if (!a.startsWith('-') && o.ruleJson === null) o.ruleJson = a;
   }
   return o;
@@ -124,6 +126,19 @@ function hikerModelUrl(raw) {
     });
   }
   return { url, params, method };
+}
+
+// 忠实模拟海阔 pd 的「自动补全链接」：相对地址用 MY_URL 补成绝对地址。
+// 官方文档：pd/parseDom 会自动补全域名与 http 前缀；而 **pdfh/parseDomForHtml
+// 不会**（"完全返回解析到的内容"），pdfa 同理。第四参数可覆盖补全基准。
+// 少了这步差异，PC 桩会把 '/detail/1' 原样输出（或给 pdfh 补错），
+// 让人误以为规则写错了、进而做出错误的"修复"。
+function joinUrl(href, base) {
+  const s = String(href == null ? '' : href);
+  if (!s || s.indexOf('<') >= 0) return s;
+  if (/^(https?:|hiker:|file:|data:|ftp:|\/\/)/i.test(s)) return s;
+  if (!base) return s;
+  try { return new URL(s, base).toString(); } catch (e) { return s; }
 }
 
 function fetchLive(url, referer, depth) {
@@ -331,7 +346,7 @@ function runRule(code, html, top, ruleObj) {
     );
     fn(
       getResCode, setResult, setResult, setResult, log, log, noop,
-      DOM.parseDom, DOM.parseDomForHtml, DOM.parseDomForArray, DOM.parseDom, DOM.parseDomForHtml, DOM.parseDomForArray,
+      DOM.parseDom, DOM.parseDomForHtml, DOM.parseDomForArray, ((h, s, b) => joinUrl(DOM.parseDom(h, s), b || myUrl)), DOM.parseDomForHtml, DOM.parseDomForArray,
       DOM.xpath, DOM.xpathArray, DOM.xpathArray,
       syncFetch, syncFetch, (u, o) => syncFetch(u, Object.assign({}, o, { method: 'POST' })),
       (reqs) => Array.isArray(reqs) ? reqs.map((r) => syncFetch(r && r.url, r && r.options)) : [],
@@ -388,8 +403,38 @@ function runRule(code, html, top, ruleObj) {
   return list;
 }
 
+// 自检：确保 pd 自动补全、pdfh/pdfa 不补全（与官方文档一致）。
+// 这是本桩最容易「悄悄失真」的地方——补错了会让人误改正确的规则。
+function selfTest() {
+  const base = 'https://example.com/index.php/vod/show/id/1.html';
+  const cases = [
+    ['pd 补全相对链接', joinUrl('/detail/1', base), 'https://example.com/detail/1'],
+    ['pd 补全无斜杠相对链接', joinUrl('detail/2', base), 'https://example.com/index.php/vod/show/id/detail/2'],
+    ['pd 不动绝对链接', joinUrl('https://cdn.x/a.jpg', base), 'https://cdn.x/a.jpg'],
+    ['pd 不动 hiker://', joinUrl('hiker://empty', base), 'hiker://empty'],
+    ['pd 不动 data:', joinUrl('data:image/png;base64,AAA', base), 'data:image/png;base64,AAA'],
+    ['pd 不动片段/HTML', joinUrl('<a href="x">', base), '<a href="x">'],
+    ['无基准时原样返回', joinUrl('/detail/1', ''), '/detail/1'],
+  ];
+  let bad = 0;
+  console.log('=== test_rule.js 自检：pd 自动补全语义 ===\n');
+  for (const [name, got, want] of cases) {
+    const ok = got === want;
+    if (!ok) bad++;
+    console.log(`${ok ? '✓' : '✗'} ${name}\n    得到: ${got}\n    期望: ${want}`);
+  }
+  // pdfh/pdfa 必须保持原样（不补全）
+  const passthrough = [DOM.parseDomForHtml('<a href="/d/1">x</a>', 'a&&href', ''), DOM.parseDomForArray('<a href="/d/1">x</a>', 'a', '')];
+  const okPass = passthrough[0] === '/d/1';
+  if (!okPass) bad++;
+  console.log(`${okPass ? '✓' : '✗'} pdfh 取 href 不补全（应为 /d/1，实际 ${passthrough[0]}）`);
+  console.log(bad ? `\n✗ 自检失败 ${bad} 项\n` : '\n✓ 自检通过\n');
+  process.exit(bad ? 1 : 0);
+}
+
 async function main() {
   const o = parseArgs(process.argv);
+  if (o.selftest) return selfTest();
   if (!o.ruleJson) { printHelp(); process.exit(2); }
   if (!fs.existsSync(o.ruleJson)) { console.error('[错误] 找不到 rule.json: ' + o.ruleJson); process.exit(1); }
   let rule;

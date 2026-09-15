@@ -18,8 +18,10 @@ SKILL.md                     技能主流程（agent 先读这个）
 README.md                    本文件
 references/
   rule_format.md             字段规范、解析写法、详情取址、依赖打包
+  rule_recipes.md            写法骨架速查（2070 条真实规则实测：四套骨架怎么选、API 使用率）
   rule_patterns.md           6 种真实架构写法与依赖识别
-  col_type.md                全部布局样式
+  col_type.md                全部布局样式（以 App 源码为准）
+  community_repos.md         GitHub 社区仓库索引 + 真实语料统计数据
   url_tags.md                占位符、请求修饰符、#标签#、媒体扩展
   js_api.md                  JS 内置 API 速查
   link_protocols.md          hiker:// 等伪协议、子页面、导入口令
