@@ -42,7 +42,7 @@
 3. 新增 `using-superpowers/references/openhands-tools.md`：把技能里的“动作”
    （加载技能、派子代理、建待办……）翻译成 OpenHands 的真实工具名。这是官方推荐的移植做法
    （“技能只描述动作，不写死工具名”）。
-4. 常驻引导 `superpowers.md` 里补了中文说明，并写明：以【默认助手】和用户指令优先。
+4. 常驻引导 `superpowers.md` 里补了中文说明，并写明：以【AGENTS.md 最高优先级规则】和用户指令优先。
 
 ## 注意 / 局限
 

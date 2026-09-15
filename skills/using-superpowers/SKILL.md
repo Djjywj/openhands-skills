@@ -61,4 +61,4 @@ If your harness appears here, read its reference file for special instructions:
 
 ## User Instructions
 
-User instructions (the `默认助手` and `chinese-beginner` skills, AGENTS.md, direct requests) take precedence over skills, which in turn override default behavior. Only skip skill workflows or instructions when your human partner has explicitly told you to. On OpenHands this means: obey the always-on `默认助手` rules (reply in Simplified Chinese, small clear steps), and keep the human's report in Chinese even while following an English skill body.
+User instructions (the `AGENTS.md` top-priority rules and `chinese-beginner` skill, direct requests) take precedence over skills, which in turn override default behavior. Only skip skill workflows or instructions when your human partner has explicitly told you to. On OpenHands this means: obey the always-on `AGENTS.md` top-priority rules (reply in Simplified Chinese, small clear steps), and keep the human's report in Chinese even while following an English skill body.

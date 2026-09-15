@@ -97,7 +97,7 @@ with `canvas_ui_control(command="show_preview", path=…)`.
 
 OpenHands is a chat UI with a right-side panel. When a skill says to "report" or
 "show" something, do both: state it in the chat **and** surface the artifact via
-`canvas_ui_control`. User instructions (the `默认助手` / `chinese-beginner`
+`canvas_ui_control`. User instructions (the `AGENTS.md` / `chinese-beginner`
 skills) take precedence: answer in Simplified Chinese, keep steps small.
 
 ## Environment
