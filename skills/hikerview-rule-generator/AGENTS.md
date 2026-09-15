@@ -102,6 +102,13 @@ node .agents/skills/hikerview-rule-generator/scripts/test_juyue.js path/to/parse
     即 `fyclass` 会被换成当前选中分类的 `class_url`。`ArticleListFragment.onClassClick`
     在点分类时 `setClass_url(url); setFirstHeader("class")`。
 
+- `examples/xvideos.rule.json`：XVIDEOS（xvideos.com）视频源，**无依赖纯规则**，用户真机实测可用（2026-09-15）。
+  写法要点：`url` 用 0 基模板 `https://www.xvideos.com/fyclass/fypage@-1@?_t=0`；
+  37 个分类 = 36 个 `/c/{slug}` + 1 个 `tags/all`（**不要混入 `/new/N`**，那是 1 基，`/new/0` 是 404）；
+  搜索 `/?k=**&p=fypage@-1@&_t=0`（`p` 0 基）；列表 `class="thumb-block"`，**封面必须取 `data-mzl`**
+  （`data-src` 里是字面量 `THUMBNUM`，取它会 404）；`col_type` 用 `movie_3`（3 列，配竖版封面）。
+  站点个案坑位详见 `references/pitfalls.md` §十（第 27~30 条）。
+
 ## 维护约定
 
 - 改技能内容时，同步更新 `SKILL.md` 的「资料索引」与 `official_docs.md` 快照说明。
