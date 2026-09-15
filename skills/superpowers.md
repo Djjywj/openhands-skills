@@ -1,7 +1,7 @@
 # Superpowers（超级技能集）
 
 本文件是【Superpowers 技能集】的常驻引导（相当于官方说的 bootstrap），每个新对话都会完整加载。
-它让下面这批技能自动生效。本文件与【AGENTS.md 最高优先级规则】【自动识别图片】等技能同时生效；若冲突，
+它让下面这批技能自动生效。本文件与【AGENTS.md 最高优先级规则】等技能同时生效；若冲突，
 以【AGENTS.md 最高优先级规则】和用户的直接指令为准，并且**一律用简体中文汇报**。
 
 > 来源：https://github.com/obra/superpowers 的移植版，只保留技能本身，工具名已翻译成 OpenHands。
