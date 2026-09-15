@@ -1,0 +1,23 @@
+{
+  "title": "XVIDEOS",
+  "author": "WorkBuddy",
+  "version": 1,
+  "group": "②视频",
+  "type": "video",
+  "col_type": "movie_3",
+  "url": "https://www.xvideos.com/fyclass/fypage@-1@?_t=0",
+  "class_name": "全部&青少年&熟女&巨乳&大屁股&大屌&口交&中出&肛交&女同&自慰&喷精&潮吹&群交&黑人&金发&褐发&红发&亚洲&印度&阿拉伯&拉丁&混血&家庭&辣妈&胖女&丝袜&内衣&恋物&打手枪&拳交&AI&屁股&绿帽&女尊&ASMR&油身",
+  "class_url": "tags/all&c/Teen-13&c/Milf-19&c/Big_Tits-23&c/Big_Ass-24&c/Big_Cock-34&c/Blowjob-15&c/Creampie-40&c/Anal-12&c/Lesbian-26&c/Solo_and_Masturbation-33&c/Cumshot-18&c/Squirting-56&c/Gangbang-69&c/Black_Woman-30&c/Blonde-20&c/Brunette-25&c/Redhead-31&c/Asian_Woman-32&c/Indian-89&c/Arab-159&c/Latina-16&c/Interracial-27&c/Fucked_Up_Family-81&c/Mature-38&c/bbw-51&c/Stockings-28&c/Lingerie-83&c/Fisting-165&c/Cam_Porn-58&c/Gapes-167&c/AI-239&c/Ass-14&c/Cuckold-237&c/Femdom-235&c/ASMR-229&c/Oiled-22",
+  "area_name": "",
+  "area_url": "",
+  "sort_name": "",
+  "sort_url": "",
+  "year_name": "",
+  "year_url": "",
+  "find_rule": "js:\nvar d = [];\nvar html = (typeof getResCode === 'function') ? getResCode() : ((typeof result !== 'undefined' && result) ? result : (typeof input !== 'undefined' ? input : ''));\nvar list = parseDomForArray(html, 'body&&.thumb-block');\nfor (var i = 0; i < list.length; i++) {\n  var it = list[i];\n  var eid = (it.match(/data-eid=\"([^\"]+)\"/) || [])[1] || '';\n  var vid = (it.match(/data-id=\"([^\"]+)\"/) || [])[1] || '';\n  var u = eid ? ('https://www.xvideos.com/video.' + eid + '/' + vid) : pd(it, 'a&&href');\n  if (!u) continue;\n  var t = pdfh(it, 'p.title&&a&&title') || (pdfh(it, 'p.title&&a&&Text') || '').replace(/\\s+\\d+.*$/, '');\n  var pic = pdfh(it, 'img&&data-mzl');\n  if (pic) pic = pic + '@Referer=https://www.xvideos.com/';\n  d.push({\n    title: (t || '').replace(/\\s+/g, ' ').trim(),\n    desc: pdfh(it, 'span.duration&&Text'),\n    img: pic,\n    url: u,\n    col_type: 'movie_3'\n  });\n}\nsetResult(d);",
+  "search_url": "https://www.xvideos.com/?k=**&p=fypage@-1@&_t=0;get;UTF-8;{referer@https://www.xvideos.com/}",
+  "searchFind": "js:\nvar d = [];\nvar html = (typeof getResCode === 'function') ? getResCode() : ((typeof result !== 'undefined' && result) ? result : (typeof input !== 'undefined' ? input : ''));\nvar list = parseDomForArray(html, 'body&&.thumb-block');\nfor (var i = 0; i < list.length; i++) {\n  var it = list[i];\n  var eid = (it.match(/data-eid=\"([^\"]+)\"/) || [])[1] || '';\n  var vid = (it.match(/data-id=\"([^\"]+)\"/) || [])[1] || '';\n  var u = eid ? ('https://www.xvideos.com/video.' + eid + '/' + vid) : pd(it, 'a&&href');\n  if (!u) continue;\n  var t = pdfh(it, 'p.title&&a&&title') || (pdfh(it, 'p.title&&a&&Text') || '').replace(/\\s+\\d+.*$/, '');\n  var pic = pdfh(it, 'img&&data-mzl');\n  if (pic) pic = pic + '@Referer=https://www.xvideos.com/';\n  d.push({\n    title: (t || '').replace(/\\s+/g, ' ').trim(),\n    desc: pdfh(it, 'span.duration&&Text'),\n    img: pic,\n    url: u,\n    col_type: 'movie_3'\n  });\n}\nsetResult(d);",
+  "detail_col_type": "movie_1",
+  "detail_find_rule": "js:\nvar html = (typeof getResCode === 'function') ? getResCode() : ((typeof result !== 'undefined' && result) ? result : (typeof input !== 'undefined' ? input : ''));\nvar d = [];\nfunction pick(re) { var m = html.match(re); return m ? m[1] : ''; }\nvar name = pick(/property=\"og:title\" content=\"([^\"]+)\"/) || pick(/<title>([^<]*)</);\nname = name.replace(/\\s*-\\s*XVIDEOS[^<]*$/i, '').trim();\nvar poster = pick(/property=\"og:image\" content=\"([^\"]+)\"/);\nvar hls = pick(/setVideoHLS\\('([^']+)'/);\nvar high = pick(/setVideoUrlHigh\\('([^']+)'/);\nvar low = pick(/setVideoUrlLow\\('([^']+)'/);\nvar dur = pick(/<span class=\"duration\">([^<]*)/);\nif (poster) poster = poster + '@Referer=https://www.xvideos.com/';\nd.push({ title: name, desc: dur, pic_url: poster, url: 'javascript:;', col_type: 'movie_1_vertical_pic_blur' });\nif (hls) d.push({ title: '▶ 在线播放 HLS', url: hls + '#isVideo=true#', col_type: 'text_1' });\nif (high) d.push({ title: '⤓ MP4 直链', url: high + '#isVideo=true#', col_type: 'text_1' });\nif (!hls && low) d.push({ title: '⤓ MP4 备用', url: low + '#isVideo=true#', col_type: 'text_1' });\nif (d.length < 2) d.push({ title: '没解析到播放地址，请稍后重试或换一个视频', url: 'javascript:;', col_type: 'text_center_1' });\nsetResult(d);",
+  "ua": "pc"
+}
